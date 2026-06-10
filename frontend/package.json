@@ -48,6 +48,10 @@
 
     "socket.io-client": "^4.8.3",
 
+    "typescript": "^5.9.3",
+
+    "vite": "^x.x.x",
+
     "zustand": "^5.0.14"
 
   },
