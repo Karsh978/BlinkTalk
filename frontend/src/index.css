@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Force light theme always */
+:root, [data-theme] {
+  color-scheme: light !important;
+}
+
+/* Override DaisyUI dark theme completely */
+[data-theme="dark"],
+[data-theme="night"],
+[data-theme="black"],
+[data-theme="dracula"],
+[data-theme="business"],
+[data-theme="coffee"],
+[data-theme="forest"],
+[data-theme="halloween"],
+[data-theme="luxury"],
+[data-theme="synthwave"] {
+  --b1: 100% 0 0 !important;
+  --b2: 97% 0 0 !important;
+  --b3: 94% 0 0 !important;
+  --bc: 20% 0 0 !important;
+  background-color: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+/* App wrapper */
+body {
+  background-color: #eef0f7 !important;
+  color: #1a1a2e !important;
+}
+
+/* Navbar forced white */
+header {
+  background: rgba(255,255,255,0.94) !important;
+  border-bottom: 1px solid #ebebf5 !important;
+    position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  
+}
