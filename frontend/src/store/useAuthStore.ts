@@ -3,7 +3,8 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = "http://localhost:5000";
+// Render ka backend URL (Bina /api ke)
+const BASE_URL = "https://blinktalk-c1cx.onrender.com";
 
 export const useAuthStore = create<any>((set, get) => ({
   authUser: null,
@@ -18,7 +19,7 @@ export const useAuthStore = create<any>((set, get) => ({
     try {
       const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
-      get().connectSocket(); // Agar user logged in hai, socket connect karo
+      get().connectSocket(); // Socket connect karein agar logged in hai
     } catch (error) {
       console.log("Error in checkAuth:", error);
       set({ authUser: null });
@@ -35,20 +36,22 @@ export const useAuthStore = create<any>((set, get) => ({
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error: any) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Signup failed");
     }
   },
 
   // 3. Login
   login: async (data: any) => {
-     set({ isLoggingIn: true });
+    set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error: any) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      set({ isLoggingIn: false });
     }
   },
 
@@ -60,36 +63,36 @@ export const useAuthStore = create<any>((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error: any) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Logout failed");
     }
   },
 
-  //profile 
-updateProfile: async (data: any) => {
-  set({ isUpdatingProfile: true });
-  try {
-    const res = await axiosInstance.put("/auth/update-profile", data);
-    set({ authUser: res.data });
-    toast.success("Profile updated successfully");
-  } catch (error: any) {
-    console.log("Error in update profile:", error);
-    toast.error(error.response.data.message);
-  } finally {
-    set({ isUpdatingProfile: false });
-  }
-},
+  // 5. Update Profile
+  updateProfile: async (data: any) => {
+    set({ isUpdatingProfile: true });
+    try {
+      const res = await axiosInstance.put("/auth/update-profile", data);
+      set({ authUser: res.data });
+      toast.success("Profile updated successfully");
+    } catch (error: any) {
+      console.log("Error in update profile:", error);
+      toast.error(error.response?.data?.message || "Update failed");
+    } finally {
+      set({ isUpdatingProfile: false });
+    }
+  },
 
-
-  // 5. Socket Connection
+  // 6. Socket Connection (Fixed Logic)
   connectSocket: () => {
     const { authUser } = get();
+    // Agar user logged in nahi hai ya socket pehle se connected hai, toh return
     if (!authUser || get().socket?.connected) return;
 
     const socket = io(BASE_URL, {
       query: { userId: authUser._id },
     });
+    
     socket.connect();
-
     set({ socket: socket });
 
     socket.on("getOnlineUsers", (userIds) => {
@@ -98,6 +101,9 @@ updateProfile: async (data: any) => {
   },
 
   disconnectSocket: () => {
-    if (get().socket) get().socket.disconnect();
+    if (get().socket) {
+      get().socket.disconnect();
+      set({ socket: null });
+    }
   },
 }));
