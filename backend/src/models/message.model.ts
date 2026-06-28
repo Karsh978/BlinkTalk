@@ -1,16 +1,23 @@
 import mongoose from "mongoose";
 
-const messageSchema = new mongoose.Schema({
-  senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", default: null },
-  // MessageSchema mein ye add karein
-deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-isDeleted: { type: Boolean, default: false },
-audio: { type: String, default: null },
-  text: { type: String },
-  image: { type: String },
-  isSeen: { type: Boolean, default: false }
-}, { timestamps: true });
+const userSchema = new mongoose.Schema(
+  {
+    fullName: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true, minlength: 6 },
+    profilePic: { type: String, default: "" },
+    phoneNumber: { type: String, unique: true, sparse: true },
+    lastSeen: { type: Date, default: Date.now },
+    contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-export default mongoose.model("Message", messageSchema);
+    // ✅ NEW: Privacy settings
+    privacy: {
+      lastSeenVisible: { type: Boolean, default: true },  // show last seen to others
+      readReceipts: { type: Boolean, default: true },     // send/receive blue ticks
+    },
+  },
+  { timestamps: true }
+);
+
+const User = mongoose.model("User", userSchema);
+export default User;

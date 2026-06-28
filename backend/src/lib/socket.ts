@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import User from "../models/user.model";
 
 const app = express();
 const server = http.createServer(app);
@@ -28,10 +29,18 @@ io.on("connection", (socket) => {
     socket.join(groupId);
   });
 
-  socket.on("disconnect", () => {
-    delete userSocketMap[userId];
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-  });
+  // In socket.ts, update the disconnect handler:
+socket.on("disconnect", async () => {
+  delete userSocketMap[userId];
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // ✅ Update lastSeen in DB when user goes offline
+  if (userId) {
+    try {
+      await User.findByIdAndUpdate(userId, { lastSeen: new Date() });
+    } catch (e) {}
+  }
+});
 });
 
 export { io, app, server };

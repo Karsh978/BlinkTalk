@@ -1,19 +1,26 @@
 import express from "express";
 import { protectRoute } from "../middlewares/auth.middleware";
-import { getMessages, getUsersForSidebar, sendMessage,sendGroupMessage } from "../controllers/message.controller";
-import { deleteMessage, markAsSeen } from "../controllers/message.controller";
+import { 
+  getMessages, 
+  getUsersForSidebar, 
+  sendMessage, 
+  sendGroupMessage,
+  deleteMessage, 
+  markAsSeen,
+  getGroupMessages
+} from "../controllers/message.controller";
 
 const router = express.Router();
 
+// ✅ Specific routes FIRST (before /:id)
 router.get("/users", protectRoute, getUsersForSidebar);
+router.get("/group/:groupId", protectRoute, getGroupMessages);      // ✅ moved up
+router.post("/send/group/:groupId", protectRoute, sendGroupMessage); // ✅ moved up
+router.post("/delete/:id", protectRoute, deleteMessage);
+router.put("/seen/:id", protectRoute, markAsSeen);
+
+// ✅ Generic /:id routes LAST
 router.get("/:id", protectRoute, getMessages);
 router.post("/send/:id", protectRoute, sendMessage);
-router.delete("/:id", protectRoute, deleteMessage);
-router.put("/seen/:id", protectRoute, markAsSeen);
-// backend/src/routes/message.route.ts
-
-// Purane routes ke niche ise add karein
-router.post("/delete/:id", protectRoute, deleteMessage);
-router.post("/send/group/:groupId", protectRoute, sendGroupMessage);
 
 export default router;

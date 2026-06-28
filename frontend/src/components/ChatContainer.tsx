@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Phone, Video } from "lucide-react"; // Added Phone & Video Icons
+import { ChevronLeft, Phone, Video } from "lucide-react"; 
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
+import { axiosInstance } from "../lib/axios"; // Make sure this path matches your axios setup
 
 // ── Custom Long Press Hook for MessageBubble Handler ──
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -28,7 +29,7 @@ const useLongPress = (callback: () => void, ms = 600) => {
   };
 };
 
-// ── Sub-Component: MessageBubble ──
+// ── Sub-Component: MessageBubble (With Seen/Unseen Status Ticks) ──
 const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLongPress: () => void; authUser: any }) => {
   const isMe = message.senderId === authUser._id || message.senderId?._id === authUser._id;
   const longPressEvent = useLongPress(onLongPress);
@@ -38,7 +39,7 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
       {...(!message.isDeleted ? longPressEvent : {})} 
       className={`chat ${isMe ? "chat-end" : "chat-start"} select-none ${!message.isDeleted ? "cursor-pointer" : "cursor-default"}`}
     >
-      {/* Updated Chat Bubble with max-w-[85%] and customized typography */}
+      {/* Chat Bubble Structure */}
       <div 
         className={`chat-bubble max-w-[85%] text-sm p-3 shadow-sm transition-all duration-200 ${
           message.isDeleted 
@@ -54,7 +55,7 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
           </p>
         ) : (
           <>
-            {/* Audio Component Player */}
+            {/* Audio Player */}
             {message.audio && (
               <div className="py-2">
                 <audio controls key={message._id} className="h-10 w-full max-w-[240px]">
@@ -64,10 +65,10 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
               </div>
             )}
 
-            {/* Text Node */}
+            {/* Text Message */}
             {message.text && <p>{message.text}</p>}
 
-            {/* Staged Images, GIFs, & Stickers */}
+            {/* Media Uploads */}
             {message.image && (
               <div className={message.image.includes("giphy.com") ? "" : "border border-black/5 rounded-lg overflow-hidden mt-1"}>
                 <img 
@@ -80,6 +81,29 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
           </>
         )}
       </div>
+
+      {/* ✅ Blue tick / single tick below sent messages */}
+      {isMe && !message.isDeleted && (
+        <div className="chat-footer opacity-70 text-[10px] flex items-center gap-1 mt-0.5">
+          {message.isSeen ? (
+            // Double blue tick — seen
+            <span className="flex text-blue-400" title="Seen">
+              <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                <path d="M1 5l3 3L10 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 5l3 3 6-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          ) : (
+            // Single grey tick — sent but not seen
+            <span className="flex opacity-50" title="Sent">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 5l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          )
+          }
+        </div>
+      )}
     </div>
   );
 };
@@ -96,10 +120,14 @@ const ChatContainer = () => {
     setSelectedGroup, 
     subscribeToMessages, 
     unsubscribeFromMessages, 
-    deleteMessage 
+    deleteMessage,
+    // Extract socket instance from your store to listen to events directly if needed locally, 
+    // or you can implement the listener directly inside your useChatStore action setup.
+    // Assuming socket is available from useAuthStore or useChatStore:
   } = useChatStore();
   
-  const { authUser } = useAuthStore();
+  const { authUser, socket } = useAuthStore(); // Usually socket lives in authStore or chatStore
+  const { fontSize, wallpaper } = useThemeStore();
   const scrollRef = useRef<any>(null);
 
   // Delete Action Panel States
@@ -108,8 +136,7 @@ const ChatContainer = () => {
     msgId: "",
     isSender: false
   });
-  const { fontSize, wallpaper } = useThemeStore();
-  // Delete handler triggered with specified deletion range
+
   const handleDelete = async (type: "me" | "everyone") => {
     try {
       await deleteMessage(deleteMenu.msgId, type);
@@ -120,14 +147,38 @@ const ChatContainer = () => {
     }
   };
 
-  // Sync Messages Feed Hook
+  // Sync Messages Feed, Socket events & Seen Status Hooks
   useEffect(() => {
-    if (selectedUser) getMessages(selectedUser._id);
+    if (selectedUser) {
+      getMessages(selectedUser._id);
+      // ✅ Mark incoming messages as seen when chat opens
+      axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
+    }
     if (selectedGroup) getGroupMessages(selectedGroup._id);
 
     subscribeToMessages();
-    return () => unsubscribeFromMessages();
-  }, [selectedUser?._id, selectedGroup?._id]);
+
+    // ✅ Real-time message seen socket listener
+    if (socket) {
+      socket.on("messagesSeen", ({ seenBy }: any) => {
+        if (selectedUser && seenBy === selectedUser._id) {
+          // Local reactive update if your store doesn't handle it globally automatically
+          useChatStore.setState((state) => ({
+            messages: state.messages.map((m: any) =>
+              m.senderId === selectedUser._id ? m : { ...m, isSeen: true }
+            ),
+          }));
+        }
+      });
+    }
+
+    return () => {
+      unsubscribeFromMessages();
+      if (socket) {
+        socket.off("messagesSeen");
+      }
+    };
+  }, [selectedUser?._id, selectedGroup?._id, socket]);
 
   // Infinite Scroll Anchor Adjustment
   useEffect(() => {
@@ -139,10 +190,10 @@ const ChatContainer = () => {
   return (
     <div className="flex-1 flex flex-col overflow-auto relative bg-base-100 h-full">
       
-      {/* Updated Modern Layout Header Wrapper */}
+      {/* Modern Top Layout Header */}
       <div className="p-3 border-b border-base-300 flex items-center justify-between bg-base-100/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
         <div className="flex items-center gap-2 overflow-hidden">
-          {/* Mobile Navigator Action */}
+          {/* Mobile Back Button */}
           <button 
             onClick={() => { setSelectedUser(null); setSelectedGroup(null); }} 
             className="md:hidden p-1 hover:bg-base-200 rounded-full transition-colors duration-150"
@@ -150,7 +201,7 @@ const ChatContainer = () => {
             <ChevronLeft size={24} />
           </button>
           
-          {/* Main User Avatar */}
+          {/* Profile Avatar */}
           <div className="avatar">
             <div className="size-9 rounded-full bg-primary/10 flex items-center justify-center font-bold overflow-hidden">
               {selectedUser ? (
@@ -161,7 +212,7 @@ const ChatContainer = () => {
             </div>
           </div>
           
-          {/* User Status Content block */}
+          {/* User Status Block */}
           <div className="overflow-hidden">
             <h3 className="font-bold text-sm truncate">
               {selectedUser ? selectedUser.fullName : selectedGroup?.name}
@@ -172,7 +223,7 @@ const ChatContainer = () => {
           </div>
         </div>
 
-        {/* Small Controlled Media Actions Utility */}
+        {/* Media Call Icons */}
         <div className="flex gap-3 text-base-content/70 pr-1">
           <button className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150">
             <Phone size={18} />
@@ -183,50 +234,50 @@ const ChatContainer = () => {
         </div>
       </div>
 
-     {/* Replace your existing messages div with this */}
-<div
-  ref={scrollRef}
-  className="flex-1 overflow-y-auto p-4 space-y-4"
-  style={{
-    fontSize: fontSize === "small" ? 13 : fontSize === "large" ? 18 : 15,
-    // Wallpaper styles
-    ...(wallpaper === "dots"      && { backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "20px 20px", opacity: 1 }),
-    ...(wallpaper === "grid"      && { backgroundImage: "linear-gradient(rgba(128,128,128,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.1) 1px, transparent 1px)", backgroundSize: "24px 24px" }),
-    ...(wallpaper === "waves"     && { backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128,128,128,0.07) 10px, rgba(128,128,128,0.07) 20px)" }),
-    ...(wallpaper === "bubbles"   && { backgroundImage: "radial-gradient(circle at 20% 50%, rgba(120,119,198,0.12) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,119,198,0.12) 0%, transparent 50%)" }),
-    ...(wallpaper === "diagonal"  && { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.06) 5px, rgba(128,128,128,0.06) 6px)" }),
-    ...(wallpaper === "gradient1" && { background: "linear-gradient(135deg, rgba(255,154,100,0.15), rgba(208,112,150,0.15))" }),
-    ...(wallpaper === "gradient2" && { background: "linear-gradient(135deg, rgba(100,200,255,0.15), rgba(50,100,200,0.15))" }),
-    ...(wallpaper === "gradient3" && { background: "linear-gradient(135deg, rgba(100,200,100,0.15), rgba(50,150,80,0.15))" }),
-  }}
->
-  {messages.map((message: any) => (
-    <MessageBubble
-      key={message._id}
-      message={message}
-      authUser={authUser}
-      onLongPress={() => {
-        if (message.isDeleted) return;
-        const isMe = message.senderId === authUser?._id || message.senderId?._id === authUser?._id;
-        setDeleteMenu({ isOpen: true, msgId: message._id, isSender: isMe });
-      }}
-    />
-  ))}
-</div>
+      {/* Main Messages Container Window */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+        style={{
+          fontSize: fontSize === "small" ? 13 : fontSize === "large" ? 18 : 15,
+          // Custom Wallpaper Background Logic
+          ...(wallpaper === "dots"      && { backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "20px 20px" }),
+          ...(wallpaper === "grid"      && { backgroundImage: "linear-gradient(rgba(128,128,128,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.1) 1px, transparent 1px)", backgroundSize: "24px 24px" }),
+          ...(wallpaper === "waves"     && { backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128,128,128,0.07) 10px, rgba(128,128,128,0.07) 20px)" }),
+          ...(wallpaper === "bubbles"   && { backgroundImage: "radial-gradient(circle at 20% 50%, rgba(120,119,198,0.12) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,119,198,0.12) 0%, transparent 50%)" }),
+          ...(wallpaper === "diagonal"  && { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.06) 5px, rgba(128,128,128,0.06) 6px)" }),
+          ...(wallpaper === "gradient1" && { background: "linear-gradient(135deg, rgba(255,154,100,0.15), rgba(208,112,150,0.15))" }),
+          ...(wallpaper === "gradient2" && { background: "linear-gradient(135deg, rgba(100,200,255,0.15), rgba(50,100,200,0.15))" }),
+          ...(wallpaper === "gradient3" && { background: "linear-gradient(135deg, rgba(100,200,100,0.15), rgba(50,150,80,0.15))" }),
+        }}
+      >
+        {messages.map((message: any) => (
+          <MessageBubble
+            key={message._id}
+            message={message}
+            authUser={authUser}
+            onLongPress={() => {
+              if (message.isDeleted) return;
+              const isMe = message.senderId === authUser?._id || message.senderId?._id === authUser?._id;
+              setDeleteMenu({ isOpen: true, msgId: message._id, isSender: isMe });
+            }}
+          />
+        ))}
+      </div>
+
       {/* Message Input Panel */}
       <MessageInput />
 
-      {/* Bottom Sheet Style Delete Modal */}
+      {/* Bottom Sheet Contextual Menu */}
       {deleteMenu.isOpen && (
         <div 
           className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm" 
           onClick={() => setDeleteMenu({ ...deleteMenu, isOpen: false })}
         >
           <div 
-            className="bg-base-100 w-full max-w-md rounded-t-3xl p-6 animate-in slide-in-from-bottom" 
+            className="bg-base-100 w-full max-w-md rounded-t-3xl p-6 " 
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Handle bar layout structure anchor */}
             <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" /> 
             
             <h3 className="font-bold text-lg mb-4 text-center">Delete Message?</h3>

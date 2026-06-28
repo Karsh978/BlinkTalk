@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useThemeStore } from "../store/useThemeStore";
-import { Palette, Check, Type, Image } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
+import { Palette, Check, Type, Image, Shield } from "lucide-react";
 
 const THEMES = [
   "light", "dark", "cupcake", "bumblebee", "emerald", "corporate",
@@ -9,7 +11,7 @@ const THEMES = [
   "night", "coffee", "winter",
 ];
 
-const THEME_ICONS: Record<string, string> = {
+const THEME_ICONS = {
   light: "☀️", dark: "🌙", cupcake: "🧁", bumblebee: "🐝",
   emerald: "💎", corporate: "💼", synthwave: "🌆", retro: "📻",
   cyberpunk: "⚡", valentine: "💝", halloween: "🎃", garden: "🌸",
@@ -19,59 +21,66 @@ const THEME_ICONS: Record<string, string> = {
   lemonade: "🍋", night: "🌃", coffee: "☕", winter: "❄️",
 };
 
-// DaisyUI theme colors — hardcoded so they actually show correctly
-const THEME_COLORS: Record<string, string[]> = {
-  light:     ["#570df8","#f000b8","#37cdbe","#3d4451"],
-  dark:      ["#661ae6","#d926aa","#1fb2a5","#a6adbb"],
-  cupcake:   ["#65c3c8","#ef9fbc","#eeaf3a","#291334"],
-  bumblebee: ["#e0a82e","#181830","#181830","#181830"],
-  emerald:   ["#66cc8a","#377cfb","#f68067","#333c4d"],
-  corporate: ["#4b6bfb","#7b92b2","#67cba0","#181a2a"],
-  synthwave: ["#e779c1","#58c7f3","#f3cc30","#221551"],
-  retro:     ["#ef9900","#dc2626","#65c3c8","#282425"],
-  cyberpunk: ["#ff7598","#75d1f0","#c07eec","#423f00"],
-  valentine: ["#e96d7b","#a991f7","#88dbdd","#632c3b"],
-  halloween: ["#f28c18","#6d3a9c","#51a800","#212121"],
-  garden:    ["#5c7f67","#ecb7b7","#f0e6d3","#100f0f"],
-  forest:    ["#1eb854","#1db88e","#1db8ab","#19362d"],
-  aqua:      ["#09ecf3","#966fb3","#ffe999","#345da7"],
-  lofi:      ["#0d0d0d","#1a1a1a","#262626","#808080"],
-  pastel:    ["#d1c1d7","#f2c9d0","#b5e4d6","#403c4a"],
-  fantasy:   ["#6e0b75","#007ebd","#4cbb17","#1f1f1f"],
-  wireframe: ["#b8b8b8","#b8b8b8","#b8b8b8","#b8b8b8"],
-  black:     ["#343232","#343232","#343232","#343232"],
-  luxury:    ["#ffffff","#152747","#513448","#09090b"],
-  dracula:   ["#ff79c6","#bd93f9","#ffb86c","#282a36"],
-  cmyk:      ["#45aeee","#e8488a","#ffe600","#403e41"],
-  autumn:    ["#8c0327","#d85251","#d59b6a","#201720"],
-  business:  ["#1c4f82","#7b2d8b","#00a96e","#1d232a"],
-  acid:      ["#ff00f4","#ff7400","#00ffcc","#1a1a1a"],
-  lemonade:  ["#519903","#e9e92e","#f7f7f7","#141301"],
-  night:     ["#38bdf8","#818cf8","#f471b5","#1e293b"],
-  coffee:    ["#db924b","#263e3f","#10576d","#120d0e"],
-  winter:    ["#047aed","#463aa1","#c148ac","#021431"],
+const THEME_COLORS = {
+  light: ["#570df8", "#f000b8", "#37cdbe", "#3d4451"],
+  dark: ["#661ae6", "#d926aa", "#1fb2a5", "#a6adbb"],
+  cupcake: ["#65c3c8", "#ef9fbc", "#eeaf3a", "#291334"],
+  bumblebee: ["#e0a82e", "#181830", "#181830", "#181830"],
+  emerald: ["#66cc8a", "#377cfb", "#f68067", "#333c4d"],
+  corporate: ["#4b6bfb", "#7b92b2", "#67cba0", "#181a2a"],
+  synthwave: ["#e779c1", "#58c7f3", "#f3cc30", "#221551"],
+  retro: ["#ef9900", "#dc2626", "#65c3c8", "#282425"],
+  cyberpunk: ["#ff7598", "#75d1f0", "#c07eec", "#423f00"],
+  valentine: ["#e96d7b", "#a991f7", "#88dbdd", "#632c3b"],
+  halloween: ["#f28c18", "#6d3a9c", "#51a800", "#212121"],
+  garden: ["#5c7f67", "#ecb7b7", "#f0e6d3", "#100f0f"],
+  forest: ["#1eb854", "#1db88e", "#1db8ab", "#19362d"],
+  aqua: ["#09ecf3", "#966fb3", "#ffe999", "#345da7"],
+  lofi: ["#0d0d0d", "#1a1a1a", "#262626", "#808080"],
+  pastel: ["#d1c1d7", "#f2c9d0", "#b5e4d6", "#403c4a"],
+  fantasy: ["#6e0b75", "#007ebd", "#4cbb17", "#1f1f1f"],
+  wireframe: ["#b8b8b8", "#b8b8b8", "#b8b8b8", "#b8b8b8"],
+  black: ["#343232", "#343232", "#343232", "#343232"],
+  luxury: ["#ffffff", "#152747", "#513448", "#09090b"],
+  dracula: ["#ff79c6", "#bd93f9", "#ffb86c", "#282a36"],
+  cmyk: ["#45aeee", "#e8488a", "#ffe600", "#403e41"],
+  autumn: ["#8c0327", "#d85251", "#d59b6a", "#201720"],
+  business: ["#1c4f82", "#7b2d8b", "#00a96e", "#1d232a"],
+  acid: ["#ff00f4", "#ff7400", "#00ffcc", "#1a1a1a"],
+  lemonade: ["#519903", "#e9e92e", "#f7f7f7", "#141301"],
+  night: ["#38bdf8", "#818cf8", "#f471b5", "#1e293b"],
+  coffee: ["#db924b", "#263e3f", "#10576d", "#120d0e"],
+  winter: ["#047aed", "#463aa1", "#c148ac", "#021431"],
 };
 
 const WALLPAPERS = [
-  { id: "none",      label: "None",      style: { background: "var(--fallback-b1,oklch(var(--b1)))" } },
-  { id: "dots",      label: "Dots",      style: { backgroundImage: "radial-gradient(circle, #888 1px, transparent 1px)", backgroundSize: "20px 20px" } },
-  { id: "grid",      label: "Grid",      style: { backgroundImage: "linear-gradient(rgba(128,128,128,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.15) 1px, transparent 1px)", backgroundSize: "24px 24px" } },
-  { id: "waves",     label: "Waves",     style: { backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128,128,128,0.1) 10px, rgba(128,128,128,0.1) 20px)" } },
-  { id: "bubbles",   label: "Bubbles",   style: { backgroundImage: "radial-gradient(circle at 20% 50%, rgba(120,119,198,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,119,198,0.15) 0%, transparent 50%)" } },
-  { id: "diagonal",  label: "Lines",     style: { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.08) 5px, rgba(128,128,128,0.08) 6px)" } },
-  { id: "gradient1", label: "Sunset",    style: { background: "linear-gradient(135deg, rgba(255,154,100,0.2), rgba(208,112,150,0.2))" } },
-  { id: "gradient2", label: "Ocean",     style: { background: "linear-gradient(135deg, rgba(100,200,255,0.2), rgba(50,100,200,0.2))" } },
-  { id: "gradient3", label: "Forest",    style: { background: "linear-gradient(135deg, rgba(100,200,100,0.2), rgba(50,150,80,0.2))" } },
+  { id: "none", label: "None", style: { background: "var(--fallback-b1,oklch(var(--b1)))" } },
+  { id: "dots", label: "Dots", style: { backgroundImage: "radial-gradient(circle, #888 1px, transparent 1px)", backgroundSize: "20px 20px" } },
+  { id: "grid", label: "Grid", style: { backgroundImage: "linear-gradient(rgba(128,128,128,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.15) 1px, transparent 1px)", backgroundSize: "24px 24px" } },
+  { id: "waves", label: "Waves", style: { backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128,128,128,0.1) 10px, rgba(128,128,128,0.1) 20px)" } },
+  { id: "bubbles", label: "Bubbles", style: { backgroundImage: "radial-gradient(circle at 20% 50%, rgba(120,119,198,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,119,198,0.15) 0%, transparent 50%)" } },
+  { id: "diagonal", label: "Lines", style: { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.08) 5px, rgba(128,128,128,0.08) 6px)" } },
+  { id: "gradient1", label: "Sunset", style: { background: "linear-gradient(135deg, rgba(255,154,100,0.2), rgba(208,112,150,0.2))" } },
+  { id: "gradient2", label: "Ocean", style: { background: "linear-gradient(135deg, rgba(100,200,255,0.2), rgba(50,100,200,0.2))" } },
+  { id: "gradient3", label: "Forest", style: { background: "linear-gradient(135deg, rgba(100,200,100,0.2), rgba(50,150,80,0.2))" } },
 ];
 
 const FONT_SIZES = [
-  { id: "small",  label: "Small",  size: "13px", preview: "Aa" },
+  { id: "small", label: "Small", size: "13px", preview: "Aa" },
   { id: "medium", label: "Medium", size: "15px", preview: "Aa" },
-  { id: "large",  label: "Large",  size: "18px", preview: "Aa" },
+  { id: "large", label: "Large", size: "18px", preview: "Aa" },
 ];
 
 const SettingsPage = () => {
   const { theme, setTheme, fontSize, setFontSize, wallpaper, setWallpaper } = useThemeStore();
+  const { authUser, updatePrivacy } = useAuthStore();
+  
+  const [lastSeenVisible, setLastSeenVisible] = useState(authUser?.privacy?.lastSeenVisible ?? true);
+  const [readReceipts, setReadReceipts] = useState(authUser?.privacy?.readReceipts ?? true);
+
+  const handlePrivacySave = async () => {
+    await updatePrivacy({ lastSeenVisible, readReceipts });
+  };
 
   return (
     <div style={{
@@ -145,7 +154,7 @@ const SettingsPage = () => {
           <div className="sl"><Palette size={13} /> Themes</div>
           <div className="tg">
             {THEMES.map((t) => {
-              const colors = THEME_COLORS[t] || ["#888","#999","#aaa","#333"];
+              const colors = THEME_COLORS[t] || ["#888", "#999", "#aaa", "#333"];
               return (
                 <button key={t} className={`tb${theme === t ? " active" : ""}`} onClick={() => setTheme(t)}>
                   {theme === t && <div className="cb"><Check size={9} color="#fff" strokeWidth={3} /></div>}
@@ -167,8 +176,8 @@ const SettingsPage = () => {
           <div className="sl"><Type size={13} /> Font Size</div>
           <div className="fg">
             {FONT_SIZES.map((f) => (
-              <button key={f.id} className={`fb${fontSize === f.id ? " active" : ""}`} onClick={() => setFontSize(f.id as any)}>
-                {fontSize === f.id && <div className="cb" style={{top:6,right:6}}><Check size={9} color="#fff" strokeWidth={3} /></div>}
+              <button key={f.id} className={`fb${fontSize === f.id ? " active" : ""}`} onClick={() => setFontSize(f.id)}>
+                {fontSize === f.id && <div className="cb" style={{ top: 6, right: 6 }}><Check size={9} color="#fff" strokeWidth={3} /></div>}
                 <span className="fp" style={{ fontSize: f.size }}>{f.preview}</span>
                 <span className="fl">{f.label}</span>
               </button>
@@ -191,6 +200,80 @@ const SettingsPage = () => {
                 <span className="wl">{w.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── Privacy ── */}
+        <div className="sc">
+          <div className="sl"><Shield size={13} /> Privacy</div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Last seen toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Last Seen</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
+                  {lastSeenVisible ? "Everyone can see when you were last online" : "Nobody can see your last seen"}
+                </div>
+              </div>
+              <label style={{ position: "relative", width: 44, height: 24, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={lastSeenVisible}
+                  onChange={(e) => setLastSeenVisible(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: "absolute", inset: 0, borderRadius: 12, cursor: "pointer",
+                  background: lastSeenVisible ? "#6c7bff" : "#3a3c52",
+                  transition: "background .2s"
+                }}>
+                  <span style={{
+                    position: "absolute", top: 3, left: lastSeenVisible ? 22 : 3,
+                    width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                    transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.3)"
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {/* Read receipts toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Read Receipts</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
+                  {readReceipts ? "Blue ticks show when messages are read" : "No blue ticks will be sent or received"}
+                </div>
+              </div>
+              <label style={{ position: "relative", width: 44, height: 24, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={readReceipts}
+                  onChange={(e) => setReadReceipts(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: "absolute", inset: 0, borderRadius: 12, cursor: "pointer",
+                  background: readReceipts ? "#6c7bff" : "#3a3c52",
+                  transition: "background .2s"
+                }}>
+                  <span style={{
+                    position: "absolute", top: 3, left: readReceipts ? 22 : 3,
+                    width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                    transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.3)"
+                  }} />
+                </span>
+              </label>
+            </div>
+
+            {/* Save button */}
+            <button
+              onClick={handlePrivacySave}
+              style={{ padding: "12px", background: "#6c7bff", color: "#fff", borderRadius: 12, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer" }}
+            >
+              Save Privacy Settings
+            </button>
           </div>
         </div>
 
