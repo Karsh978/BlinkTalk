@@ -24,14 +24,14 @@ export const useChatStore = create<any>((set, get) => ({
   }
 },
 
-  getGroups: async () => {
-    try {
-      const res = await axiosInstance.get("/groups");
-      set({ groups: res.data || [] });
-    } catch (error) { 
-      console.error("Error loading groups:", error); 
-    }
-  },
+ getGroups: async () => {
+  try {
+    const res = await axiosInstance.get("/groups"); // ✅ correct endpoint
+    set({ groups: res.data || [] });
+  } catch (error) {
+    console.error("Error loading groups:", error);
+  }
+},
 
   setSelectedUser: (user: any) => {
     if (get().selectedUser?._id === user?._id) return;
@@ -171,4 +171,15 @@ export const useChatStore = create<any>((set, get) => ({
       console.error("Error fetching conversations:", error);
     }
   },
+
+  createGroup: async ({ name, members }: { name: string; members: string[] }) => {
+  try {
+    const res = await axiosInstance.post("/groups/create", { name, members });
+    // Add new group to local list instantly
+    set({ groups: [...get().groups, res.data] });
+    toast.success("Group created!");
+  } catch (error) {
+    toast.error("Failed to create group");
+  }
+},
 }));

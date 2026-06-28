@@ -118,7 +118,7 @@ const Sidebar = () => {
           </button>
         ))}
 
-        // After filteredUsers map, add empty state:
+       
         {filteredUsers.length === 0 && !isUsersLoading && (
           <div className="text-center py-10 text-gray-400">
             <UserPlus size={32} className="mx-auto mb-2 opacity-40" />
