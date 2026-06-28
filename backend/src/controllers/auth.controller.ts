@@ -150,3 +150,44 @@ export const findUserByContact = async (req: any, res: any) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Add a user to contacts
+export const addContact = async (req: any, res: Response) => {
+  try {
+    const { contactId } = req.body;
+    const userId = req.user._id;
+
+    if (contactId === userId.toString()) {
+      return res.status(400).json({ message: "You cannot add yourself" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Already added check
+    if (user.contacts.includes(contactId)) {
+      return res.status(400).json({ message: "Contact already added" });
+    }
+
+    user.contacts.push(contactId);
+    await user.save();
+
+    const contact = await User.findById(contactId).select("-password");
+    res.status(200).json(contact);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Get my contacts list
+export const getContacts = async (req: any, res: Response) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate("contacts", "-password")
+      .lean();
+
+    res.status(200).json(user?.contacts || []);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

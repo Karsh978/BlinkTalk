@@ -2,6 +2,7 @@ import express from "express";
 import { login, logout, signup, updateProfile } from "../controllers/auth.controller"; // 1. Added updateProfile here
 import { protectRoute } from "../middlewares/auth.middleware";
 import { searchUsers,findUserByContact } from "../controllers/auth.controller";
+import { addContact, getContacts } from "../controllers/auth.controller";
 
 
 const router = express.Router();
@@ -14,6 +15,8 @@ router.put("/update-profile", protectRoute, updateProfile);
 router.get("/search", protectRoute, searchUsers);
 router.get("/find-contact", protectRoute, findUserByContact);
 
+router.post("/add-contact", protectRoute, addContact);   // ✅ add a contact
+router.get("/contacts", protectRoute, getContacts); 
 
 // Ye check karne ke liye ki user logged in hai ya nahi (Frontend ke liye useful)
 router.get("/check", protectRoute, (req: any, res) => {

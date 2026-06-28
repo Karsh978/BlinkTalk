@@ -13,16 +13,16 @@ export const useChatStore = create<any>((set, get) => ({
   isMessagesLoading: false,
 
   getUsers: async () => {
-    set({ isUsersLoading: true });
-    try {
-      const res = await axiosInstance.get("/messages/users");
-      set({ users: res.data });
-    } catch (error) { 
-      toast.error("Error loading users"); 
-    } finally { 
-      set({ isUsersLoading: false }); 
-    }
-  },
+  set({ isUsersLoading: true });
+  try {
+    const res = await axiosInstance.get("/auth/contacts"); // ✅ only my contacts
+    set({ users: res.data });
+  } catch (error) {
+    toast.error("Error loading contacts");
+  } finally {
+    set({ isUsersLoading: false });
+  }
+},
 
   getGroups: async () => {
     try {
@@ -148,6 +148,20 @@ export const useChatStore = create<any>((set, get) => ({
       toast.error("Failed to delete message");
     }
   },
+
+
+  addContact: async (contactId: string) => {
+  try {
+    const res = await axiosInstance.post("/auth/add-contact", { contactId });
+    // Add to local list immediately
+    set({ users: [...get().users, res.data] });
+    toast.success("Contact added!");
+    return true;
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Failed to add contact");
+    return false;
+  }
+},
 
   getRecentChats: async () => {
     try {
