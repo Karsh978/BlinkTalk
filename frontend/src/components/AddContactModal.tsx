@@ -11,14 +11,21 @@ const AddContactModal = ({ isOpen, onClose }: any) => {
   if (!isOpen) return null;
 
   const handleSearch = async () => {
-    try {
-      const res = await axiosInstance.get(`/auth/find-contact?contact=${query}`);
-      setFoundUser(res.data);
-    } catch (error) {
+  if (!query.trim()) return;
+  try {
+    const res = await axiosInstance.get(`/auth/search?query=${query}`);
+    // /search returns an array, /find-contact returns a single user
+    if (res.data.length > 0) {
+      setFoundUser(res.data[0]); // show first match
+    } else {
       setFoundUser(null);
       alert("No user found!");
     }
-  };
+  } catch (error) {
+    setFoundUser(null);
+    alert("No user found!");
+  }
+};
 
   const startChat = () => {
     setSelectedUser(foundUser);
