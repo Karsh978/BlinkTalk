@@ -3,6 +3,7 @@ import { ChevronLeft, Phone, Video } from "lucide-react"; // Added Phone & Video
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
+import { useThemeStore } from "../store/useThemeStore";
 
 // ── Custom Long Press Hook for MessageBubble Handler ──
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -107,7 +108,7 @@ const ChatContainer = () => {
     msgId: "",
     isSender: false
   });
-
+  const { fontSize, wallpaper } = useThemeStore();
   // Delete handler triggered with specified deletion range
   const handleDelete = async (type: "me" | "everyone") => {
     try {
@@ -182,27 +183,36 @@ const ChatContainer = () => {
         </div>
       </div>
 
-      {/* Messages List Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message: any) => (
-          <MessageBubble 
-            key={message._id} 
-            message={message} 
-            authUser={authUser}
-            onLongPress={() => {
-              if (message.isDeleted) return;
-
-              const isMe = message.senderId === authUser?._id || message.senderId?._id === authUser?._id;
-              setDeleteMenu({ 
-                isOpen: true, 
-                msgId: message._id, 
-                isSender: isMe 
-              });
-            }} 
-          />
-        ))}
-      </div>
-
+     {/* Replace your existing messages div with this */}
+<div
+  ref={scrollRef}
+  className="flex-1 overflow-y-auto p-4 space-y-4"
+  style={{
+    fontSize: fontSize === "small" ? 13 : fontSize === "large" ? 18 : 15,
+    // Wallpaper styles
+    ...(wallpaper === "dots"      && { backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "20px 20px", opacity: 1 }),
+    ...(wallpaper === "grid"      && { backgroundImage: "linear-gradient(rgba(128,128,128,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.1) 1px, transparent 1px)", backgroundSize: "24px 24px" }),
+    ...(wallpaper === "waves"     && { backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(128,128,128,0.07) 10px, rgba(128,128,128,0.07) 20px)" }),
+    ...(wallpaper === "bubbles"   && { backgroundImage: "radial-gradient(circle at 20% 50%, rgba(120,119,198,0.12) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,119,198,0.12) 0%, transparent 50%)" }),
+    ...(wallpaper === "diagonal"  && { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.06) 5px, rgba(128,128,128,0.06) 6px)" }),
+    ...(wallpaper === "gradient1" && { background: "linear-gradient(135deg, rgba(255,154,100,0.15), rgba(208,112,150,0.15))" }),
+    ...(wallpaper === "gradient2" && { background: "linear-gradient(135deg, rgba(100,200,255,0.15), rgba(50,100,200,0.15))" }),
+    ...(wallpaper === "gradient3" && { background: "linear-gradient(135deg, rgba(100,200,100,0.15), rgba(50,150,80,0.15))" }),
+  }}
+>
+  {messages.map((message: any) => (
+    <MessageBubble
+      key={message._id}
+      message={message}
+      authUser={authUser}
+      onLongPress={() => {
+        if (message.isDeleted) return;
+        const isMe = message.senderId === authUser?._id || message.senderId?._id === authUser?._id;
+        setDeleteMenu({ isOpen: true, msgId: message._id, isSender: isMe });
+      }}
+    />
+  ))}
+</div>
       {/* Message Input Panel */}
       <MessageInput />
 
