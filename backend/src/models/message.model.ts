@@ -1,23 +1,33 @@
-import mongoose from "mongoose";
+import mongoose, { Document } from "mongoose";
 
-const userSchema = new mongoose.Schema(
+// ✅ Add this interface
+interface IMessage extends Document {
+  senderId: mongoose.Types.ObjectId;
+  receiverId?: mongoose.Types.ObjectId;
+  groupId?: mongoose.Types.ObjectId;
+  text?: string;
+  image?: string;
+  audio?: string;
+  isSeen: boolean;
+  isDeleted: boolean;
+  deletedBy: mongoose.Types.ObjectId[];
+}
+
+const messageSchema = new mongoose.Schema(
   {
-    fullName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true, minlength: 6 },
-    profilePic: { type: String, default: "" },
-    phoneNumber: { type: String, unique: true, sparse: true },
-    lastSeen: { type: Date, default: Date.now },
-    contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-
-    // ✅ NEW: Privacy settings
-    privacy: {
-      lastSeenVisible: { type: Boolean, default: true },  // show last seen to others
-      readReceipts: { type: Boolean, default: true },     // send/receive blue ticks
-    },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", default: null },
+    text: { type: String },
+    image: { type: String },
+    audio: { type: String, default: null },
+    isSeen: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
-export default User;
+// ✅ Pass IMessage as generic type
+const Message = mongoose.model<IMessage>("Message", messageSchema);
+export default Message;
