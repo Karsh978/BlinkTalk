@@ -15,7 +15,6 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 
-// ✅ FIX: proper CORS
 app.use(cors({
   origin: process.env.FRONTEND_URL || "https://blink-talk-ruddy.vercel.app",
   credentials: true,
