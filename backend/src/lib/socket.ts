@@ -4,9 +4,16 @@ import express from "express";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: ["https://blinktalk-c1cx.onrender.com"] } });
 
-export const userSocketMap: any = {}; 
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "https://blink-talk-ruddy.vercel.app", // ✅ frontend URL
+    methods: ["GET", "POST"],
+    credentials: true, // ✅ needed for cookie auth
+  },
+});
+
+export const userSocketMap: any = {};
 
 export const getReceiverSocketId = (userId: string) => userSocketMap[userId];
 
@@ -17,7 +24,9 @@ io.on("connection", (socket) => {
 
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-  socket.on("joinGroup", (groupId) => { socket.join(groupId); });
+  socket.on("joinGroup", (groupId) => {
+    socket.join(groupId);
+  });
 
   socket.on("disconnect", () => {
     delete userSocketMap[userId];
