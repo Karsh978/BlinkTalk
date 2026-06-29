@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
+import { useCallStore } from "./store/useCallStore"; // Added missing import
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+import CallScreen from "./components/CallScreen";
+import IncomingCallModal from "./components/IncomingCallModal";
 
 // Components & Pages
 import Navbar from "./components/Navbar";
@@ -13,8 +16,10 @@ import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 
 const App = () => {
-  const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const { authUser, checkAuth, isCheckingAuth, socket } = useAuthStore();
+  const { handleIncomingCall, handleCallAnswered, handleIceCandidate, endCall } = useCallStore();
 
+  // 1. Initial auth check & notification permissions
   useEffect(() => {
     checkAuth();
     if ("Notification" in window) {
@@ -22,7 +27,29 @@ const App = () => {
     }
   }, [checkAuth]);
 
-  if (isCheckingAuth && !authUser)
+  // 2. Real-time socket signaling listeners for calls
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("incomingCall", handleIncomingCall);
+    socket.on("callAnswered", handleCallAnswered);
+    socket.on("iceCandidate", handleIceCandidate);
+    socket.on("callEnded", endCall);
+    socket.on("callRejected", () => {
+      endCall();
+      alert("Call was rejected");
+    });
+
+    return () => {
+      socket.off("incomingCall");
+      socket.off("callAnswered");
+      socket.off("iceCandidate");
+      socket.off("callEnded");
+      socket.off("callRejected");
+    };
+  }, [socket, handleIncomingCall, handleCallAnswered, handleIceCandidate, endCall]);
+
+  if (isCheckingAuth && !authUser) {
     return (
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -32,6 +59,7 @@ const App = () => {
         <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
       </div>
     );
+  }
 
   return (
     <div data-theme="light" style={{ minHeight: "100vh", background: "#eef0f7" }}>
@@ -45,6 +73,11 @@ const App = () => {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>
+      
+      {/* Real-time WebRTC Overlay Interfaces */}
+      <IncomingCallModal />
+      <CallScreen />
+      
       <Toaster />
     </div>
   );

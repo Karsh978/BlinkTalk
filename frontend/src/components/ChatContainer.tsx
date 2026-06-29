@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
 import { axiosInstance } from "../lib/axios"; // Make sure this path matches your axios setup
+import { useCallStore } from "../store/useCallStore"; // Added call store hook
 
 // ── Custom Long Press Hook for MessageBubble Handler ──
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -110,6 +111,8 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
 
 // ── Main Component: ChatContainer ──
 const ChatContainer = () => {
+  const { startCall } = useCallStore(); // Extracted startCall action
+
   const { 
     messages, 
     getMessages, 
@@ -121,12 +124,9 @@ const ChatContainer = () => {
     subscribeToMessages, 
     unsubscribeFromMessages, 
     deleteMessage,
-    // Extract socket instance from your store to listen to events directly if needed locally, 
-    // or you can implement the listener directly inside your useChatStore action setup.
-    // Assuming socket is available from useAuthStore or useChatStore:
   } = useChatStore();
   
-  const { authUser, socket } = useAuthStore(); // Usually socket lives in authStore or chatStore
+  const { authUser, socket } = useAuthStore(); 
   const { fontSize, wallpaper } = useThemeStore();
   const scrollRef = useRef<any>(null);
 
@@ -162,7 +162,6 @@ const ChatContainer = () => {
     if (socket) {
       socket.on("messagesSeen", ({ seenBy }: any) => {
         if (selectedUser && seenBy === selectedUser._id) {
-          // Local reactive update if your store doesn't handle it globally automatically
           useChatStore.setState((state) => ({
             messages: state.messages.map((m: any) =>
               m.senderId === selectedUser._id ? m : { ...m, isSeen: true }
@@ -223,12 +222,22 @@ const ChatContainer = () => {
           </div>
         </div>
 
-        {/* Media Call Icons */}
+        {/* Media Call Icons Layer */}
         <div className="flex gap-3 text-base-content/70 pr-1">
-          <button className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150">
+          <button
+            onClick={() => selectedUser && startCall(selectedUser, "audio")}
+            disabled={!selectedUser}
+            className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150 disabled:opacity-30"
+            title="Voice call"
+          >
             <Phone size={18} />
           </button>
-          <button className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150">
+          <button
+            onClick={() => selectedUser && startCall(selectedUser, "video")}
+            disabled={!selectedUser}
+            className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150 disabled:opacity-30"
+            title="Video call"
+          >
             <Video size={18} />
           </button>
         </div>
