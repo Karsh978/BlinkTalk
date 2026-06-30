@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Phone, Video } from "lucide-react"; 
+import { ChevronLeft, Phone, Video, Ban } from "lucide-react"; 
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
-import { axiosInstance } from "../lib/axios"; // Make sure this path matches your axios setup
-import { useCallStore } from "../store/useCallStore"; // Added call store hook
+import { axiosInstance } from "../lib/axios"; 
+import { useCallStore } from "../store/useCallStore"; 
 
 // ── Custom Long Press Hook for MessageBubble Handler ──
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -83,7 +83,7 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
         )}
       </div>
 
-      {/* ✅ Blue tick / single tick below sent messages */}
+      {/* Blue tick / single tick below sent messages */}
       {isMe && !message.isDeleted && (
         <div className="chat-footer opacity-70 text-[10px] flex items-center gap-1 mt-0.5">
           {message.isSeen ? (
@@ -111,7 +111,7 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
 
 // ── Main Component: ChatContainer ──
 const ChatContainer = () => {
-  const { startCall } = useCallStore(); // Extracted startCall action
+  const { startCall } = useCallStore(); 
 
   const { 
     messages, 
@@ -126,9 +126,13 @@ const ChatContainer = () => {
     deleteMessage,
   } = useChatStore();
   
-  const { authUser, socket } = useAuthStore(); 
+  // Destructured toggleBlock from useAuthStore
+  const { authUser, socket, toggleBlock } = useAuthStore(); 
   const { fontSize, wallpaper } = useThemeStore();
   const scrollRef = useRef<any>(null);
+
+  // Check if the current selected user is blocked
+  const isBlocked = authUser?.blockedUsers?.includes(selectedUser?._id);
 
   // Delete Action Panel States
   const [deleteMenu, setDeleteMenu] = useState<{ isOpen: boolean; msgId: string; isSender: boolean }>({
@@ -151,14 +155,14 @@ const ChatContainer = () => {
   useEffect(() => {
     if (selectedUser) {
       getMessages(selectedUser._id);
-      // ✅ Mark incoming messages as seen when chat opens
+      // Mark incoming messages as seen when chat opens
       axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
     }
     if (selectedGroup) getGroupMessages(selectedGroup._id);
 
     subscribeToMessages();
 
-    // ✅ Real-time message seen socket listener
+    // Real-time message seen socket listener
     if (socket) {
       socket.on("messagesSeen", ({ seenBy }: any) => {
         if (selectedUser && seenBy === selectedUser._id) {
@@ -191,7 +195,7 @@ const ChatContainer = () => {
       
       {/* Modern Top Layout Header */}
       <div className="p-3 border-b border-base-300 flex items-center justify-between bg-base-100/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-center gap-2 overflow-hidden flex-1">
           {/* Mobile Back Button */}
           <button 
             onClick={() => { setSelectedUser(null); setSelectedGroup(null); }} 
@@ -212,29 +216,50 @@ const ChatContainer = () => {
           </div>
           
           {/* User Status Block */}
-          <div className="overflow-hidden">
+          <div className="overflow-hidden min-w-0 flex-1 pr-2">
             <h3 className="font-bold text-sm truncate">
               {selectedUser ? selectedUser.fullName : selectedGroup?.name}
             </h3>
             <p className="text-[10px] opacity-60">
-              {selectedUser ? "Online" : "Group Chat"}
+              {selectedUser ? (isBlocked ? "Blocked" : "Online") : "Group Chat"}
             </p>
           </div>
         </div>
 
-        {/* Media Call Icons Layer */}
-        <div className="flex gap-3 text-base-content/70 pr-1">
+        {/* Action Layer: Block Button & Media Call Icons */}
+        <div className="flex items-center gap-3 text-base-content/70 pr-1 shrink-0">
+          {/* Block Button */}
+          {selectedUser && (
+            <button
+              onClick={() => toggleBlock(selectedUser._id)}
+              className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full transition-colors duration-150 ${
+                isBlocked
+                  ? "bg-error/10 text-error animate-pulse"
+                  : "hover:bg-base-200 text-base-content/70"
+              }`}
+              title={isBlocked ? "Unblock user" : "Block user"}
+            >
+              <Ban size={16} />
+              <span className="hidden sm:inline">
+                {isBlocked ? "Unblock" : "Block"}
+              </span>
+            </button>
+          )}
+
+          {/* Voice Call Button */}
           <button
             onClick={() => selectedUser && startCall(selectedUser, "audio")}
-            disabled={!selectedUser}
+            disabled={!selectedUser || isBlocked}
             className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150 disabled:opacity-30"
             title="Voice call"
           >
             <Phone size={18} />
           </button>
+
+          {/* Video Call Button */}
           <button
             onClick={() => selectedUser && startCall(selectedUser, "video")}
-            disabled={!selectedUser}
+            disabled={!selectedUser || isBlocked}
             className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150 disabled:opacity-30"
             title="Video call"
           >
