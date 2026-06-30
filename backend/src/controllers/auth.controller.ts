@@ -210,6 +210,113 @@ export const updatePrivacy = async (req: any, res: Response) => {
   }
 };
 
+
+// Update blood donor profile
+export const updateDonorProfile = async (req: any, res: Response) => {
+  try {
+    const { bloodGroup, isAvailableDonor } = req.body;
+    const userId = req.user._id;
+
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { bloodGroup, isAvailableDonor },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating donor profile" });
+  }
+};
+
+// Update user's GPS location
+export const updateLocation = async (req: any, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const userId = req.user._id;
+
+    if (latitude == null || longitude == null) {
+      return res.status(400).json({ message: "Latitude and longitude required" });
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      {
+        location: { type: "Point", coordinates: [longitude, latitude] },
+        locationUpdatedAt: new Date(),
+      },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating location" });
+  }
+};
+
+// Find nearby blood donors
+export const findBloodDonors = async (req: any, res: Response) => {
+  try {
+    const { bloodGroup, latitude, longitude, maxDistance } = req.query;
+    const userId = req.user._id;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({ message: "Your location is required to search" });
+    }
+
+    const query: any = {
+      _id: { $ne: userId },
+      isAvailableDonor: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(longitude as string), parseFloat(latitude as string)],
+          },
+          $maxDistance: maxDistance ? parseInt(maxDistance as string) : 25000, // default 25km
+        },
+      },
+    };
+
+    if (bloodGroup && bloodGroup !== "all") {
+      query.bloodGroup = bloodGroup;
+    }
+
+    const donors = await User.find(query).select("-password").limit(50);
+
+    // Calculate distance manually for display (MongoDB $near doesn't return distance directly)
+    const donorsWithDistance = donors.map((d: any) => {
+      const dist = getDistanceKm(
+        parseFloat(latitude as string),
+        parseFloat(longitude as string),
+        d.location.coordinates[1],
+        d.location.coordinates[0]
+      );
+      return { ...d.toObject(), distanceKm: dist };
+    });
+
+    res.status(200).json(donorsWithDistance);
+  } catch (error) {
+    console.log("Error finding donors:", error);
+    res.status(500).json({ message: "Error finding donors" });
+  }
+};
+
+// Haversine formula — distance between two GPS points in km
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10; // rounded to 1 decimal
+}
+
 // ── 10. Mark Messages As Seen ──
 export const markAsSeen = async (req: any, res: Response) => {
   try {

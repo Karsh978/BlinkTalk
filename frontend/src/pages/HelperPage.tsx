@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Plus, Phone, MessageSquare, Share2, Search } from "lucide-react";
+import BloodDonorPage from "./BloodDonorPage"; // adjust path
 
 const CATEGORIES = [
   { id:"blood",  label:"Blood donor",  icon:"🩸", color:"#e83a6b", bg:"#e83a6b15", count:12 },
@@ -30,6 +31,11 @@ export default function HelperPage() {
 
   const cat = CATEGORIES.find(c => c.id === selected);
   const posts = selected ? (MOCK_POSTS[selected] || []) : [];
+
+  // Add this check before the main return
+  if (selected === "blood") {
+    return <BloodDonorPage onBack={() => setSelected(null)} />;
+  }
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#f5f6fa", overflow:"hidden" }}>
