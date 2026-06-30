@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
 // Render ka backend URL (Bina /api ke)
-const BASE_URL = "https://blinktalk-c1cx.onrender.com";
+const BASE_URL = "https://blinktalk-o5h0.onrender.com";
 
 export const useAuthStore = create<any>((set, get) => ({
   authUser: null,
