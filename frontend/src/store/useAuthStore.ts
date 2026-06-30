@@ -13,6 +13,8 @@ export const useAuthStore = create<any>((set, get) => ({
   isUpdatingProfile: false,
   socket: null,
   onlineUsers: [],
+  blockedUsersList: [],
+isLoadingBlocked: false,
 
   // 1. Check if user is logged in
   checkAuth: async () => {
@@ -99,6 +101,31 @@ export const useAuthStore = create<any>((set, get) => ({
     toast.success(res.data.message);
   } catch (error: any) {
     toast.error(error.response?.data?.message || "Error toggling block");
+  }
+},
+
+fetchBlockedUsers: async () => {
+  set({ isLoadingBlocked: true });
+  try {
+    const res = await axiosInstance.get("/auth/blocked");
+    set({ blockedUsersList: res.data });
+  } catch (error: any) {
+    toast.error("Failed to load blocked users");
+  } finally {
+    set({ isLoadingBlocked: false });
+  }
+},
+
+unblockUser: async (userId: string) => {
+  try {
+    const res = await axiosInstance.post(`/auth/block/${userId}`);
+    set({ authUser: res.data.authUser });
+    set((state: any) => ({
+      blockedUsersList: state.blockedUsersList.filter((u: any) => u._id !== userId),
+    }));
+    toast.success(res.data.message);
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Error unblocking user");
   }
 },
 

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon } from "lucide-react";
+import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX } from "lucide-react";
+
 
 const WALLPAPERS = [
   { id: "none", label: "None", style: { background: "var(--fallback-b1,oklch(var(--b1)))" } },
@@ -56,13 +57,18 @@ const SettingRow = ({
 
 const SettingsPage = () => {
   const { fontSize, setFontSize, wallpaper, setWallpaper } = useThemeStore();
-  const { authUser, updatePrivacy } = useAuthStore();
+ const { authUser, updatePrivacy, blockedUsersList, fetchBlockedUsers, unblockUser, isLoadingBlocked } = useAuthStore();
 
   const [lastSeenVisible, setLastSeenVisible] = useState(authUser?.privacy?.lastSeenVisible ?? true);
   const [readReceipts, setReadReceipts] = useState(authUser?.privacy?.readReceipts ?? true);
 
   // Only one section open at a time
   const [openSection, setOpenSection] = useState<string | null>(null);
+  useEffect(() => {
+  if (openSection === "blocked") {
+    fetchBlockedUsers();
+  }
+}, [openSection]);
   const toggleSection = (id: string) => setOpenSection((prev) => (prev === id ? null : id));
 
   const handlePrivacySave = async () => {
@@ -247,6 +253,64 @@ const SettingsPage = () => {
               Save Privacy Settings
             </button>
           </div>
+        </SettingRow>
+        {/* ── Blocked Users ── */}
+        <SettingRow
+          icon={<UserX size={18} />}
+          title="Blocked Users"
+          subtitle={`${authUser?.blockedUsers?.length || 0} blocked`}
+          isOpen={openSection === "blocked"}
+          onClick={() => toggleSection("blocked")}
+        >
+          {isLoadingBlocked ? (
+            <div style={{ color: "#636890", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+              Loading...
+            </div>
+          ) : blockedUsersList.length === 0 ? (
+            <div style={{ color: "#636890", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+              You haven't blocked anyone
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {blockedUsersList.map((u: any) => (
+                <div
+                  key={u._id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    background: "#252740",
+                    borderRadius: 14,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <img
+                      src={u.profilePic || "/avatar.png"}
+                      alt={u.fullName}
+                      style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
+                    />
+                    <span style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>{u.fullName}</span>
+                  </div>
+                  <button
+                    onClick={() => unblockUser(u._id)}
+                    style={{
+                      padding: "6px 14px",
+                      background: "rgba(239,68,68,0.12)",
+                      color: "#ef4444",
+                      borderRadius: 10,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Unblock
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </SettingRow>
       </div>
     </div>

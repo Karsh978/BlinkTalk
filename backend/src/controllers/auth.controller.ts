@@ -350,6 +350,19 @@ export const toggleBlockUser = async (req: any, res: Response) => {
   }
 };
 
+export const getBlockedUsers = async (req: any, res: Response) => {
+  try {
+    const me = await User.findById(req.user._id).populate(
+      "blockedUsers",
+      "fullName profilePic email"
+    );
+    res.status(200).json(me?.blockedUsers || []);
+  } catch (error: any) {
+    console.log("Error in getBlockedUsers:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // ── 10. Mark Messages As Seen ──
 export const markAsSeen = async (req: any, res: Response) => {
   try {

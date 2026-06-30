@@ -5,7 +5,7 @@ import { searchUsers,findUserByContact } from "../controllers/auth.controller";
 import { addContact, getContacts } from "../controllers/auth.controller";
 import { updatePrivacy } from "../controllers/auth.controller";
 import { updateDonorProfile, updateLocation, findBloodDonors } from "../controllers/auth.controller";
-import { toggleBlockUser } from "../controllers/auth.controller";
+import { toggleBlockUser,getBlockedUsers } from "../controllers/auth.controller";
 
 
 const router = express.Router();
@@ -25,6 +25,7 @@ router.put("/donor-profile", protectRoute, updateDonorProfile);
 router.put("/location",      protectRoute, updateLocation);
 router.get("/blood-donors",  protectRoute, findBloodDonors);
 router.post("/block/:id", protectRoute, toggleBlockUser);
+router.get("/blocked", protectRoute, getBlockedUsers);
 
 // Ye check karne ke liye ki user logged in hai ya nahi (Frontend ke liye useful)
 router.get("/check", protectRoute, (req: any, res) => {
