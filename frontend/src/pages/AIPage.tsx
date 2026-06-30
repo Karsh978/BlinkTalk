@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, Loader } from "lucide-react";
+import { axiosInstance } from "../lib/axios";
 
 interface Message { role: "user" | "ai"; text: string; }
 
 export default function AIPage() {
   const [messages, setMessages] = useState<Message[]>([
-    { role:"ai", text:"Namaste! Main BlinkTalk AI hoon. Kuch bhi pucho — translate karo, smart reply lo, ya kuch bhi!" }
+    { role:"ai", text:"Namaste! Main Jiva hoon, tumhara personal AI assistant. Kuch bhi pucho!" }
   ]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,25 +20,21 @@ export default function AIPage() {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role:"user", text:userMsg }]);
+
+    const newMessages = [...messages, { role:"user" as const, text:userMsg }];
+    setMessages(newMessages);
     setLoading(true);
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: "You are BlinkTalk AI, a helpful assistant inside a chat app. Be concise, friendly, and helpful. Reply in the same language the user writes in.",
-          messages: [{ role:"user", content: userMsg }],
-        }),
+      // ✅ Calls YOUR backend, not Groq directly — API key stays safe
+      const res = await axiosInstance.post("/ai/chat", {
+        message: userMsg,
+        history: messages.slice(-10), // last 10 messages for context
       });
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || "Sorry, kuch error aaya!";
-      setMessages(prev => [...prev, { role:"ai", text:reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role:"ai", text:"Network error. Try again!" }]);
+
+      setMessages(prev => [...prev, { role:"ai", text: res.data.reply }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role:"ai", text:"Sorry, Jiva abhi available nahi hai. Try again!" }]);
     } finally {
       setLoading(false);
     }
@@ -52,8 +49,8 @@ export default function AIPage() {
           <Sparkles size={18} color="#fff" />
         </div>
         <div>
-          <h2 style={{ fontSize:16, fontWeight:800, color:"#1a1b2e" }}>BlinkTalk AI</h2>
-          <p style={{ fontSize:11, color:"#9094b0" }}>Powered by Claude</p>
+          <h2 style={{ fontSize:16, fontWeight:800, color:"#1a1b2e" }}>Jiva AI</h2>
+          <p style={{ fontSize:11, color:"#9094b0" }}>Powered by Groq · Lightning fast</p>
         </div>
       </div>
 
@@ -82,6 +79,7 @@ export default function AIPage() {
               background: m.role==="user" ? "#6c7bff" : "#fff",
               color: m.role==="user" ? "#fff" : "#1a1b2e",
               fontSize:13, lineHeight:1.5, border: m.role==="ai" ? "1px solid #e8eaf0" : "none",
+              whiteSpace:"pre-wrap",
             }}>
               {m.text}
             </div>
@@ -105,7 +103,7 @@ export default function AIPage() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key==="Enter" && send()}
-          placeholder="Ask AI anything..."
+          placeholder="Jiva se kuch bhi pucho..."
           style={{ flex:1, background:"#f5f6fa", border:"none", borderRadius:14, padding:"10px 14px", fontSize:13, color:"#1a1b2e", outline:"none" }}
         />
         <button onClick={send} disabled={!input.trim() || loading}
