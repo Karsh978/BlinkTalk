@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX } from "lucide-react";
+import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info } from "lucide-react";
 
 
 const WALLPAPERS = [
@@ -312,6 +312,87 @@ const SettingsPage = () => {
             </div>
           )}
         </SettingRow>
+{/* ── About ── */}
+<SettingRow
+  icon={<Info size={18} />}
+  title="About"
+  subtitle="Version, developer info"
+  isOpen={openSection === "about"}
+  onClick={() => toggleSection("about")}
+>
+  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+    {/* App version */}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+      <div>
+        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>App Version</div>
+        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>BlinkTalk v1.0.0</div>
+      </div>
+      <span style={{ fontSize: 11, color: "#636890", background: "#1c1e2e", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>Stable</span>
+    </div>
+
+    {/* Developer */}
+    <div style={{ padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+      <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Developer</div>
+      <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Built with g-1 & by BlinkTalk Team</div>
+    </div>
+
+    {/* Help & Support */}
+    <a 
+      href="mailto:support@blinktalk.com"
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 16px", background: "#252740", borderRadius: 14,
+        textDecoration: "none"
+      }}
+    >
+      <div>
+        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Help & Support</div>
+        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>support@blinktalk.com</div>
+      </div>
+      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>Email →</span>
+    </a>
+
+    {/* Privacy Policy */}
+    <a 
+      href="#"
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 16px", background: "#252740", borderRadius: 14,
+        textDecoration: "none"
+      }}
+    >
+      <div>
+        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Privacy Policy</div>
+        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>How we handle your data</div>
+      </div>
+      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
+    </a>
+
+    {/* Terms */}
+    <a 
+      href="#"
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 16px", background: "#252740", borderRadius: 14,
+        textDecoration: "none"
+      }}
+    >
+      <div>
+        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Terms of Service</div>
+        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Rules and guidelines</div>
+      </div>
+      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
+    </a>
+
+    {/* Made with */}
+    <div style={{ textAlign: "center", color: "#3a3c52", fontSize: 11.5, padding: "8px 0 4px", fontWeight: 600, letterSpacing: ".04em" }}>
+      data is encrypted and secure
+    </div>
+
+  </div>
+</SettingRow>
+        
       </div>
     </div>
   );
