@@ -317,6 +317,39 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return Math.round(R * c * 10) / 10; // rounded to 1 decimal
 }
 
+export const toggleBlockUser = async (req: any, res: Response) => {
+  try {
+    const { id: targetId } = req.params;
+    const myId = req.user._id;
+
+    if (targetId === myId.toString()) {
+      return res.status(400).json({ message: "You cannot block yourself" });
+    }
+
+    const me = await User.findById(myId);
+    if (!me) return res.status(404).json({ message: "User not found" });
+
+    const isBlocked = me.blockedUsers.some((id: any) => id.toString() === targetId);
+
+    const updated = await User.findByIdAndUpdate(
+      myId,
+      isBlocked
+        ? { $pull: { blockedUsers: targetId } }
+        : { $addToSet: { blockedUsers: targetId } },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json({
+      message: isBlocked ? "User unblocked" : "User blocked",
+      isBlocked: !isBlocked,
+      authUser: updated,
+    });
+  } catch (error: any) {
+    console.log("Error in toggleBlockUser:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // ── 10. Mark Messages As Seen ──
 export const markAsSeen = async (req: any, res: Response) => {
   try {

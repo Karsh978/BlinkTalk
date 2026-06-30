@@ -5,6 +5,15 @@ import { getReceiverSocketId, io } from "../lib/socket";
 import cloudinary from "../lib/cloudinary";
 
 
+
+const isBlockedEitherWay = async (userA: string, userB: string) => {
+  const [a, b] = await Promise.all([User.findById(userA), User.findById(userB)]);
+  if (!a || !b) return true;
+  const aBlockedB = a.blockedUsers.some((id: any) => id.toString() === userB);
+  const bBlockedA = b.blockedUsers.some((id: any) => id.toString() === userA);
+  return aBlockedB || bBlockedA;
+};
+
 export const getUsersForSidebar = async (req: any, res: Response) => {
   try {
     const loggedInUserId = req.user._id;
@@ -57,6 +66,10 @@ export const sendMessage = async (req: any, res: Response) => {
     const { text, image,audio  } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+    const blocked = await isBlockedEitherWay(senderId.toString(), receiverId);
+if (blocked) {
+  return res.status(403).json({ message: "Cannot send message — you or this user has blocked the other" });
+}
 
     let imageUrl;
     if (image) {

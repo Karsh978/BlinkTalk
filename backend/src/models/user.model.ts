@@ -8,6 +8,8 @@ interface IUser extends Document {
   phoneNumber?: string;
   lastSeen: Date;
   contacts: mongoose.Types.ObjectId[];
+  blockedUsers: mongoose.Types.ObjectId[];
+  
   privacy: {
     lastSeenVisible: boolean;
     readReceipts: boolean;
@@ -31,10 +33,12 @@ const userSchema = new mongoose.Schema(
     phoneNumber: { type: String, unique: true, sparse: true },
     lastSeen: { type: Date, default: Date.now },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     privacy: {
       lastSeenVisible: { type: Boolean, default: true },
       readReceipts: { type: Boolean, default: true },
     },
+    
 
     // ✅ Blood donor fields
     bloodGroup: {

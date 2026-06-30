@@ -5,8 +5,9 @@ import { formatLastSeen } from "../lib/utils";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, authUser, toggleBlock } = useAuthStore();
   const isOnline = onlineUsers.includes(selectedUser._id);
+  const isBlockedByMe = authUser?.blockedUsers?.includes(selectedUser._id);
 
   return (
     <div className="p-2.5 border-b border-base-300 bg-base-100/50 backdrop-blur-md sticky top-0 z-10">
@@ -36,10 +37,20 @@ const ChatHeader = () => {
           </div>
         </div>
 
-        {/* Close button */}
-        <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-sm btn-circle">
-          <X />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Block / Unblock button */}
+          <button
+            onClick={() => toggleBlock(selectedUser._id)}
+            className={`btn btn-xs ${isBlockedByMe ? "btn-error" : "btn-ghost text-error"}`}
+          >
+            {isBlockedByMe ? "Unblock" : "Block"}
+          </button>
+
+          {/* Close button */}
+          <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-sm btn-circle">
+            <X />
+          </button>
+        </div>
       </div>
     </div>
   );

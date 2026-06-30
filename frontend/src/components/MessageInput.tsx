@@ -21,6 +21,11 @@ const MessageInput = () => {
   const { sendMessage, selectedUser } = useChatStore();
   const { authUser, socket } = useAuthStore();
 
+  // ── Block check ──
+  const isBlockedByMe = authUser?.blockedUsers?.includes(selectedUser?._id);
+  const isBlockedByThem = selectedUser?.blockedUsers?.includes(authUser?._id);
+  const isBlocked = isBlockedByMe || isBlockedByThem;
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setText(e.target.value);
@@ -123,6 +128,19 @@ const MessageInput = () => {
   };
 
   const canSend = !!(text.trim() || imagePreview);
+
+  // ── Blocked state: show message instead of input ──
+  if (isBlocked) {
+    return (
+      <div className="p-2 md:p-4 bg-base-100 border-t border-base-300 relative shrink-0">
+        <div className="text-center text-sm p-3 bg-base-200 rounded-xl text-base-content/70">
+          {isBlockedByMe
+            ? "You have blocked this user. Unblock to send messages."
+            : "You can't message this user."}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-2 md:p-4 bg-base-100 border-t border-base-300 relative shrink-0">

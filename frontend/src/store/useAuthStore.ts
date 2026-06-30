@@ -92,6 +92,16 @@ export const useAuthStore = create<any>((set, get) => ({
     }
   },
 
+  toggleBlock: async (userId: string) => {
+  try {
+    const res = await axiosInstance.post(`/auth/block/${userId}`);
+    set({ authUser: res.data.authUser });
+    toast.success(res.data.message);
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || "Error toggling block");
+  }
+},
+
   // 6. Socket Connection (Fixed Logic)
   connectSocket: () => {
     const { authUser } = get();
