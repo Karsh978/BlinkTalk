@@ -154,11 +154,10 @@ const ChatContainer = () => {
   // Sync Messages Feed, Socket events & Seen Status Hooks
   useEffect(() => {
     if (selectedUser) {
-      getMessages(selectedUser._id);
-      // Mark incoming messages as seen when chat opens
-      axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
-    }
-    if (selectedGroup) getGroupMessages(selectedGroup._id);
+    getMessages(selectedUser._id);
+    axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
+  }
+   if (selectedGroup) getGroupMessages(selectedGroup._id);
 
     subscribeToMessages();
 

@@ -90,6 +90,7 @@ export const useChatStore = create<any>((set, get) => ({
     socket.off("messageDeletedEveryone");
 
     socket.on("newMessage", (newMessage: any) => {
+       console.log("🔔 New message received:", newMessage);
   // ── Notification ──
   const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
   const selectedUser = get().selectedUser;
@@ -111,6 +112,10 @@ export const useChatStore = create<any>((set, get) => ({
       });
     }
   }
+   const currentSelectedUser = get().selectedUser;
+    if (currentSelectedUser && newMessage.senderId?.toString() === currentSelectedUser._id?.toString()) {
+      set({ messages: [...get().messages, newMessage] });
+    }
 
   // ── Store update ──
   if (selectedUser && newMessage.senderId?.toString() === selectedUser._id?.toString()) {
