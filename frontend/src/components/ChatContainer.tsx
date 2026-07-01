@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Phone, Video, Ban } from "lucide-react"; 
+import { ChevronLeft, Phone, Video, Ban, Trash2 } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
 import { axiosInstance } from "../lib/axios"; 
 import { useCallStore } from "../store/useCallStore"; 
+
 
 // ── Custom Long Press Hook for MessageBubble Handler ──
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -124,6 +125,7 @@ const ChatContainer = () => {
     subscribeToMessages, 
     unsubscribeFromMessages, 
     deleteMessage,
+    clearChat,
   } = useChatStore();
   
   // Destructured toggleBlock from useAuthStore
@@ -140,6 +142,7 @@ const ChatContainer = () => {
     msgId: "",
     isSender: false
   });
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleDelete = async (type: "me" | "everyone") => {
     try {
@@ -243,6 +246,17 @@ const ChatContainer = () => {
               </span>
             </button>
           )}
+          {/* Clear Chat Button */}
+{selectedUser && (
+  <button
+    onClick={() => setShowClearConfirm(true)}
+    className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150"
+    title="Clear chat"
+  >
+    <Trash2 size={18} />
+  </button>
+)}
+          
 
           {/* Voice Call Button */}
           <button
@@ -336,6 +350,41 @@ const ChatContainer = () => {
               >
                 Cancel
               </button>
+              {/* Clear Chat Confirmation */}
+{showClearConfirm && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+    onClick={() => setShowClearConfirm(false)}
+  >
+    <div
+      className="bg-base-100 w-full max-w-md rounded-t-3xl p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
+      <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
+      <p className="text-sm text-base-content/60 text-center mb-6">
+        All messages will be deleted for you only. This cannot be undone.
+      </p>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={async () => {
+            await clearChat(selectedUser._id);
+            setShowClearConfirm(false);
+          }}
+          className="btn btn-error normal-case"
+        >
+          🗑️ Clear for me
+        </button>
+        <button
+          onClick={() => setShowClearConfirm(false)}
+          className="btn btn-outline mt-2 normal-case"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
             </div>
           </div>
         </div>

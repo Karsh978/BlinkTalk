@@ -1,5 +1,6 @@
 import express from "express";
 import { protectRoute } from "../middlewares/auth.middleware";
+import { clearChat } from "../controllers/message.controller";
 import { 
   getMessages, 
   getUsersForSidebar, 
@@ -18,6 +19,7 @@ router.get("/group/:groupId", protectRoute, getGroupMessages);      // ✅ moved
 router.post("/send/group/:groupId", protectRoute, sendGroupMessage); // ✅ moved up
 router.post("/delete/:id", protectRoute, deleteMessage);
 router.put("/seen/:id", protectRoute, markAsSeen);
+router.delete("/clear/:id", protectRoute, clearChat);
 
 // ✅ Generic /:id routes LAST
 router.get("/:id", protectRoute, getMessages);

@@ -13,6 +13,7 @@ export const useChatStore = create<any>((set, get) => ({
   selectedGroup: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  
 
   getUsers: async () => {
     set({ isUsersLoading: true });
@@ -167,6 +168,16 @@ export const useChatStore = create<any>((set, get) => ({
       toast.error("Failed to delete message");
     }
   },
+
+  clearChat: async (userId: string) => {
+  try {
+    await axiosInstance.delete(`/messages/clear/${userId}`);
+    set({ messages: [] }); // Local screen turant clear
+    toast.success("Chat cleared");
+  } catch (error: any) {
+    toast.error("Failed to clear chat");
+  }
+},
 
   addContact: async (contactId: string) => {
     try {

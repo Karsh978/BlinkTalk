@@ -109,7 +109,29 @@ let audioUrl = null;
   }
 };
 
+export const clearChat = async (req: any, res: Response) => {
+  try {
+    const { id: otherUserId } = req.params;
+    const myId = req.user._id;
 
+    // Sirf "delete for me" logic — dono taraf ke messages mein apni ID daalo deletedBy mein
+    await Message.updateMany(
+      {
+        $or: [
+          { senderId: myId, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: myId },
+        ],
+        groupId: null,
+      },
+      { $addToSet: { deletedBy: myId } }
+    );
+
+    res.status(200).json({ message: "Chat cleared" });
+  } catch (error: any) {
+    console.log("Error in clearChat:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 
 export const markAsSeen = async (req: any, res: Response) => {
