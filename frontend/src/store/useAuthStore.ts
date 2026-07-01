@@ -3,8 +3,9 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-// Render ka backend URL (Bina /api ke)
-const BASE_URL = "https://blinktalk-c1cx.onrender.com/api";
+const BASE_URL = import.meta.env.MODE === "development" 
+  ? "http://localhost:5001" 
+  : "https://blinktalk-c1cx.onrender.com";
 
 export const useAuthStore = create<any>((set, get) => ({
   authUser: null,
