@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { ArrowLeft, Plus, Phone, MessageSquare, Share2, Search } from "lucide-react";
 import BloodDonorPage from "./BloodDonorPage"; // adjust path
-
+import RideSharePage from "./RideSharePage";
+import StudyPage from "./StudyPage";
+import LostFoundPage from "./LostFoundPage";
 const CATEGORIES = [
   { id:"blood",  label:"Blood donor",  icon:"🩸", color:"#e83a6b", bg:"#e83a6b15", count:12 },
   { id:"ride",   label:"Ride",         icon:"🚗", color:"#6c7bff", bg:"#6c7bff15", count:8  },
@@ -31,6 +33,18 @@ export default function HelperPage() {
 
   const cat = CATEGORIES.find(c => c.id === selected);
   const posts = selected ? (MOCK_POSTS[selected] || []) : [];
+
+  if (selected === "study") {
+  return <StudyPage onBack={() => setSelected(null)} />;
+}
+
+if (selected === "lost") {
+  return <LostFoundPage onBack={() => setSelected(null)} />;
+}
+
+  if (selected === "ride") {
+  return <RideSharePage onBack={() => setSelected(null)} />;
+}
 
   // Add this check before the main return
   if (selected === "blood") {
