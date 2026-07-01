@@ -90,33 +90,33 @@ export const useChatStore = create<any>((set, get) => ({
     socket.off("messageDeletedEveryone");
 
     socket.on("newMessage", (newMessage: any) => {
-      // ── Browser Notification ──
-      const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
-      const selectedUser = get().selectedUser;
-      const isChatOpen = selectedUser?._id === newMessage.senderId;
-      const isWindowFocused = document.hasFocus();
+  // ── Notification ──
+  const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
+  const selectedUser = get().selectedUser;
+  const isChatOpen = selectedUser?._id?.toString() === newMessage.senderId?.toString();
+  const isWindowFocused = document.hasFocus();
 
-      if (notificationsEnabled && (!isChatOpen || !isWindowFocused)) {
-        if (notificationSound) {
-          const audio = new Audio("/notification.mp3");
-          audio.volume = 0.5;
-          audio.play().catch(() => {});
-        }
-        if (Notification.permission === "granted") {
-          new Notification("BlinkTalk", {
-            body: notificationPreview
-              ? (newMessage.text || (newMessage.image ? "📷 Photo" : newMessage.audio ? "🎤 Voice message" : "New message"))
-              : "New message",
-            icon: "/logo.png",
-          });
-        }
-      }
+  if (notificationsEnabled && (!isChatOpen || !isWindowFocused)) {
+    if (notificationSound) {
+      const audio = new Audio("/notification.mp3");
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    }
+    if (Notification.permission === "granted") {
+      new Notification("BlinkTalk", {
+        body: notificationPreview
+          ? (newMessage.text || (newMessage.image ? "📷 Photo" : newMessage.audio ? "🎤 Voice message" : "New message"))
+          : "New message",
+        icon: "/logo.png",
+      });
+    }
+  }
 
-      // ── Message store update ──
-      if (selectedUser && newMessage.senderId === selectedUser._id) {
-        set({ messages: [...get().messages, newMessage] });
-      }
-    });
+  // ── Store update ──
+  if (selectedUser && newMessage.senderId?.toString() === selectedUser._id?.toString()) {
+    set({ messages: [...get().messages, newMessage] });
+  }
+}),
 
     socket.on("newGroupMessage", (msg: any) => {
       const { selectedGroup } = get();

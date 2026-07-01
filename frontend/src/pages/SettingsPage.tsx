@@ -229,7 +229,7 @@ const SettingsPage = () => {
           onClick={() => toggleSection("privacy")}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifycontent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
               <div>
                 <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Last Seen</div>
                 <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
