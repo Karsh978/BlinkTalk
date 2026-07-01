@@ -89,12 +89,11 @@ export const useChatStore = create<any>((set, get) => ({
     socket.off("newGroupMessage");
     socket.off("messageDeletedEveryone");
 
-    socket.on("newMessage", (newMessage: any) => {
-       console.log("🔔 New message received:", newMessage);
-  // ── Notification ──
+   socket.on("newMessage", (newMessage: any) => {
   const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
-  const selectedUser = get().selectedUser;
-  const isChatOpen = selectedUser?._id?.toString() === newMessage.senderId?.toString();
+  
+  const currentSelectedUser = get().selectedUser; // ← sirf get() use karo, destructure mat karo
+  const isChatOpen = currentSelectedUser?._id?.toString() === newMessage.senderId?.toString();
   const isWindowFocused = document.hasFocus();
 
   if (notificationsEnabled && (!isChatOpen || !isWindowFocused)) {
@@ -112,16 +111,12 @@ export const useChatStore = create<any>((set, get) => ({
       });
     }
   }
-   const currentSelectedUser = get().selectedUser;
-    if (currentSelectedUser && newMessage.senderId?.toString() === currentSelectedUser._id?.toString()) {
-      set({ messages: [...get().messages, newMessage] });
-    }
 
-  // ── Store update ──
-  if (selectedUser && newMessage.senderId?.toString() === selectedUser._id?.toString()) {
+  // ← SIRF get() se lete hain, koi aur variable nahi
+  if (get().selectedUser && newMessage.senderId?.toString() === get().selectedUser._id?.toString()) {
     set({ messages: [...get().messages, newMessage] });
   }
-}),
+});
 
     socket.on("newGroupMessage", (msg: any) => {
       const { selectedGroup } = get();
