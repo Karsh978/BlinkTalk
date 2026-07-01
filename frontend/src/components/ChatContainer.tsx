@@ -152,35 +152,34 @@ const ChatContainer = () => {
   };
 
   // Sync Messages Feed, Socket events & Seen Status Hooks
-  useEffect(() => {
-    if (selectedUser) {
+ useEffect(() => {
+  if (selectedUser) {
     getMessages(selectedUser._id);
     axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
   }
-   if (selectedGroup) getGroupMessages(selectedGroup._id);
+  if (selectedGroup) getGroupMessages(selectedGroup._id);
 
-    subscribeToMessages();
+  subscribeToMessages(); // ✅ Har baar selectedUser change hone par re-subscribe
 
-    // Real-time message seen socket listener
-    if (socket) {
-      socket.on("messagesSeen", ({ seenBy }: any) => {
-        if (selectedUser && seenBy === selectedUser._id) {
-          useChatStore.setState((state) => ({
-            messages: state.messages.map((m: any) =>
-              m.senderId === selectedUser._id ? m : { ...m, isSeen: true }
-            ),
-          }));
-        }
-      });
-    }
-
-    return () => {
-      unsubscribeFromMessages();
-      if (socket) {
-        socket.off("messagesSeen");
+  if (socket) {
+    socket.on("messagesSeen", ({ seenBy }: any) => {
+      if (selectedUser && seenBy?.toString() === selectedUser._id?.toString()) {
+        useChatStore.setState((state) => ({
+          messages: state.messages.map((m: any) =>
+            m.senderId?.toString() === selectedUser._id?.toString()
+              ? { ...m, isSeen: true }
+              : m
+          ),
+        }));
       }
-    };
-  }, [selectedUser?._id, selectedGroup?._id, socket]);
+    });
+  }
+
+  return () => {
+    unsubscribeFromMessages();
+    if (socket) socket.off("messagesSeen");
+  };
+}, [selectedUser?._id, selectedGroup?._id, socket]); // ✅ selectedUser._id pe dependency
 
   // Infinite Scroll Anchor Adjustment
   useEffect(() => {

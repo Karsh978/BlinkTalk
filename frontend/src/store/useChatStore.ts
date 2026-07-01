@@ -81,60 +81,57 @@ export const useChatStore = create<any>((set, get) => ({
   },
 
   subscribeToMessages: () => {
-    const socket = useAuthStore.getState().socket;
-    if (!socket) return;
-    
-    // Prevent duplicate event attachments
-    socket.off("newMessage");
-    socket.off("newGroupMessage");
-    socket.off("messageDeletedEveryone");
+  const socket = useAuthStore.getState().socket;
+  if (!socket) return;
 
-   socket.on("newMessage", (newMessage: any) => {
-  const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
-  
-  const currentSelectedUser = get().selectedUser; // ← sirf get() use karo, destructure mat karo
-  const isChatOpen = currentSelectedUser?._id?.toString() === newMessage.senderId?.toString();
-  const isWindowFocused = document.hasFocus();
+  socket.off("newMessage");
+  socket.off("newGroupMessage");
+  socket.off("messageDeletedEveryone");
 
-  if (notificationsEnabled && (!isChatOpen || !isWindowFocused)) {
-    if (notificationSound) {
-      const audio = new Audio("/notification.mp3");
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
-    }
-    if (Notification.permission === "granted") {
-      new Notification("BlinkTalk", {
-        body: notificationPreview
-          ? (newMessage.text || (newMessage.image ? "📷 Photo" : newMessage.audio ? "🎤 Voice message" : "New message"))
-          : "New message",
-        icon: "/logo.png",
-      });
-    }
-  }
+  socket.on("newMessage", (newMessage: any) => {
+    // Notification
+    const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
+    const currentUser = get().selectedUser;
+    const isChatOpen = currentUser?._id?.toString() === newMessage.senderId?.toString();
 
-  // ← SIRF get() se lete hain, koi aur variable nahi
-  if (get().selectedUser && newMessage.senderId?.toString() === get().selectedUser._id?.toString()) {
-    set({ messages: [...get().messages, newMessage] });
-  }
-});
-
-    socket.on("newGroupMessage", (msg: any) => {
-      const { selectedGroup } = get();
-      if (selectedGroup && msg.groupId === selectedGroup._id) {
-        set({ messages: [...get().messages, msg] });
+    if (notificationsEnabled && (!isChatOpen || !document.hasFocus())) {
+      if (notificationSound) {
+        new Audio("/notification.mp3").play().catch(() => {});
       }
-    });
+      if (Notification.permission === "granted") {
+        new Notification("BlinkTalk", {
+          body: notificationPreview
+            ? (newMessage.text || (newMessage.image ? "📷 Photo" : newMessage.audio ? "🎤 Voice message" : "New message"))
+            : "New message",
+          icon: "/logo.png",
+        });
+      }
+    }
 
-    socket.on("messageDeletedEveryone", (messageId: string) => {
-      set({
-        messages: get().messages.map((m: any) =>
-          m._id === messageId 
-            ? { ...m, text: "This message was deleted", isDeleted: true, image: null, audio: null } 
-            : m
-        ),
-      });
+    // ✅ Har baar get() se fresh selectedUser lo
+    const activeUser = get().selectedUser;
+    if (activeUser?._id?.toString() === newMessage.senderId?.toString()) {
+      set({ messages: [...get().messages, newMessage] });
+    }
+  });
+
+  socket.on("newGroupMessage", (msg: any) => {
+    const { selectedGroup } = get();
+    if (selectedGroup?._id?.toString() === msg.groupId?.toString()) {
+      set({ messages: [...get().messages, msg] });
+    }
+  });
+
+  socket.on("messageDeletedEveryone", (messageId: string) => {
+    set({
+      messages: get().messages.map((m: any) =>
+        m._id === messageId
+          ? { ...m, text: "This message was deleted", isDeleted: true, image: null, audio: null }
+          : m
+      ),
     });
-  },
+  });
+},
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
