@@ -4,13 +4,11 @@ import Message from "../models/message.model";
 import { getReceiverSocketId, io } from "../lib/socket";
 import cloudinary from "../lib/cloudinary";
 
-
-
 const isBlockedEitherWay = async (userA: string, userB: string) => {
   const [a, b] = await Promise.all([User.findById(userA), User.findById(userB)]);
   if (!a || !b) return true;
-  const aBlockedB = a.blockedUsers.some((id: any) => id.toString() === userB);
-  const bBlockedA = b.blockedUsers.some((id: any) => id.toString() === userA);
+  const aBlockedB = a.blockedUsers?.some((id: any) => id.toString() === userB) || false;
+  const bBlockedA = b.blockedUsers?.some((id: any) => id.toString() === userA) || false;
   return aBlockedB || bBlockedA;
 };
 
@@ -34,10 +32,9 @@ export const getMessages = async (req: any, res: Response) => {
       $or: [
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
-        
       ],
       groupId: null,
-      deletedBy: { $ne: myId } // <--- YE ZAROORI HAI: Sirf private messages
+      deletedBy: { $ne: myId }
     });
 
     res.status(200).json(messages);
@@ -51,7 +48,7 @@ export const getGroupMessages = async (req: any, res: Response) => {
     const { groupId } = req.params;
     const myId = req.user._id;
 
-    const messages = await Message.find({ groupId: groupId, deletedBy: { $ne: myId } }) // <--- SIRF is group ke messages
+    const messages = await Message.find({ groupId: groupId, deletedBy: { $ne: myId } })
       .populate("senderId", "fullName profilePic"); 
     res.status(200).json(messages);
   } catch (error) {
@@ -59,17 +56,16 @@ export const getGroupMessages = async (req: any, res: Response) => {
   }
 };
 
-
-
 export const sendMessage = async (req: any, res: Response) => {
   try {
-    const { text, image,audio  } = req.body;
+    const { text, image, audio } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+    
     const blocked = await isBlockedEitherWay(senderId.toString(), receiverId);
-if (blocked) {
-  return res.status(403).json({ message: "Cannot send message — you or this user has blocked the other" });
-}
+    if (blocked) {
+      return res.status(403).json({ message: "Cannot send message — you or this user has blocked the other" });
+    }
 
     let imageUrl;
     if (image) {
@@ -77,15 +73,13 @@ if (blocked) {
       imageUrl = uploadResponse.secure_url;
     }
 
-let audioUrl = null;
+    let audioUrl = null;
     if (audio) {
-      // Audio ko Cloudinary par upload karein (resource_type: "video" use hota hai audio ke liye)
       const uploadResponse = await cloudinary.uploader.upload(audio, {
         resource_type: "video", 
       });
       audioUrl = uploadResponse.secure_url;
     }
-
 
     const newMessage = new Message({
       senderId,
@@ -114,7 +108,6 @@ export const clearChat = async (req: any, res: Response) => {
     const { id: otherUserId } = req.params;
     const myId = req.user._id;
 
-    // Sirf "delete for me" logic — dono taraf ke messages mein apni ID daalo deletedBy mein
     await Message.updateMany(
       {
         $or: [
@@ -133,10 +126,85 @@ export const clearChat = async (req: any, res: Response) => {
   }
 };
 
+export const getStorageStats = async (req: any, res: Response) => {
+  try {
+    const myId = req.user._id;
+
+    const messages = await Message.find({
+      $or: [{ senderId: myId }, { receiverId: myId }],
+      groupId: null,
+      deletedBy: { $ne: myId },
+    });
+
+    const totalMessages = messages.length;
+    const imageMessages = messages.filter((m: any) => m.image).length;
+    const audioMessages = messages.filter((m: any) => m.audio).length;
+    const textMessages = messages.filter((m: any) => m.text && !m.image && !m.audio).length;
+    const deletedMessages = messages.filter((m: any) => m.isDeleted).length;
+
+    res.status(200).json({
+      totalMessages,
+      imageMessages,
+      audioMessages,
+      textMessages,
+      deletedMessages,
+    });
+  } catch (error: any) {
+    console.log("Error in getStorageStats:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const toggleReaction = async (req: any, res: Response) => {
+  try {
+    const { id: messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    const existingIndex = message.reactions.findIndex(
+      (r: any) => r.userId.toString() === userId.toString() && r.emoji === emoji
+    );
+
+    if (existingIndex !== -1) {
+      message.reactions.splice(existingIndex, 1);
+    } else {
+      const myReactionIndex = message.reactions.findIndex(
+        (r: any) => r.userId.toString() === userId.toString()
+      );
+      if (myReactionIndex !== -1) message.reactions.splice(myReactionIndex, 1);
+      message.reactions.push({ emoji, userId });
+    }
+
+    await message.save();
+
+    const receiverId = message.receiverId?.toString();
+    const senderId = message.senderId?.toString();
+
+    [receiverId, senderId].forEach((id) => {
+      if (id) {
+        const socketId = getReceiverSocketId(id);
+        if (socketId) {
+          io.to(socketId).emit("reactionUpdated", {
+            messageId,
+            reactions: message.reactions,
+          });
+        }
+      }
+    });
+
+    res.status(200).json({ reactions: message.reactions });
+  } catch (error: any) {
+    console.log("Error in toggleReaction:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 export const markAsSeen = async (req: any, res: Response) => {
   try {
-    const { id: senderId } = req.params; // Jiske messages humne dekhe
+    const { id: senderId } = req.params;
     const userId = req.user._id;
 
     await Message.updateMany(
@@ -144,7 +212,6 @@ export const markAsSeen = async (req: any, res: Response) => {
       { $set: { isSeen: true } }
     );
 
-    // Sender ko batao ki unke messages "Seen" ho gaye hain
     const senderSocketId = getReceiverSocketId(senderId);
     if (senderSocketId) {
       io.to(senderSocketId).emit("messagesSeen", { seenBy: userId });
@@ -155,6 +222,7 @@ export const markAsSeen = async (req: any, res: Response) => {
     res.status(500).json({ message: "Error updating status" });
   }
 };
+
 export const deleteMessage = async (req: any, res: Response) => {
   try {
     const { id: messageId } = req.params;
@@ -165,69 +233,34 @@ export const deleteMessage = async (req: any, res: Response) => {
     if (!message) return res.status(404).json({ message: "Message not found" });
 
     if (type === "everyone") {
-      
       if (message.senderId.toString() !== userId.toString()) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-   await Message.findByIdAndUpdate(messageId, {
-    text: "This message was deleted",
-    image: null,
-    audio: null,
-    isDeleted: true,
-  });
-      
-      // Socket: Sabko batao message delete ho gaya
-      io.emit("messageDeletedEveryone", messageId);
+
+      await Message.findByIdAndUpdate(messageId, {
+        text: "This message was deleted",
+        image: null,
+        audio: null,
+        isDeleted: true,
+      });
+
+      // Notify both parties in the room/chat
+      const receiverSocketId = getReceiverSocketId(message.receiverId?.toString() || "");
+      const senderSocketId = getReceiverSocketId(message.senderId.toString());
+
+      if (receiverSocketId) io.to(receiverSocketId).emit("messageDeletedEveryone", messageId);
+      if (senderSocketId) io.to(senderSocketId).emit("messageDeletedEveryone", messageId);
+
+      return res.status(200).json({ message: "Message deleted for everyone" });
     } else {
-      // 'Delete for me': User ID ko 'deletedBy' array mein daal do
+      // Logic for 'Delete for me'
       await Message.findByIdAndUpdate(messageId, {
         $addToSet: { deletedBy: userId }
       });
+      return res.status(200).json({ message: "Message deleted for you" });
     }
-
-    res.status(200).json({ message: "Deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error deleting message" });
-  }
-};
-
-export const sendGroupMessage = async (req: any, res: any) => {
-  try {
-    const { text, image } = req.body;
-    const { groupId } = req.params;
-    const senderId = req.user._id;
-
-    let imageUrl = "";
-    if (image) {
-      // Agar image hai toh Cloudinary par upload karein (Production logic)
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
-    }
-
-    const newMessage = new Message({
-      senderId,
-      groupId, // Note: Humne Message Model mein groupId add kiya hai
-      text,
-      image: imageUrl,
-    });
-
-    await newMessage.save();
-
-    // SOCKET.IO REAL-TIME LOGIC:
-    // Hum message ko us 'Room' mein bhejenge jiska naam groupId hai.
-    // Jo bhi members online honge aur is room mein honge, unhe message mil jayega.
-    io.to(groupId).emit("newGroupMessage", {
-        ...newMessage.toObject(),
-        senderId: {
-            _id: req.user._id,
-            fullName: req.user.fullName,
-            profilePic: req.user.profilePic
-        }
-    });
-
-    res.status(201).json(newMessage);
   } catch (error: any) {
-    console.log("Error in sendGroupMessage: ", error.message);
+    console.log("Error in deleteMessage:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };

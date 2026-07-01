@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info, User, Camera, Bell } from "lucide-react";
+import { axiosInstance } from "../lib/axios";
+import toast from "react-hot-toast";
+import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info, User, Camera, Bell, HardDrive } from "lucide-react";
 
 const WALLPAPERS = [
   { id: "none", label: "None", style: { background: "var(--fallback-b1,oklch(var(--b1)))" } },
@@ -73,6 +75,8 @@ const SettingsPage = () => {
   const [editPic, setEditPic] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [storageStats, setStorageStats] = useState<any>(null);
+const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,6 +99,10 @@ const SettingsPage = () => {
       setIsUpdatingProfile(false);
     }
   };
+  useEffect(() => {
+  if (openSection === "blocked") fetchBlockedUsers();
+  if (openSection === "storage") fetchStorageStats();
+}, [openSection]);
 
   useEffect(() => {
     if (openSection === "blocked") {
@@ -107,6 +115,17 @@ const SettingsPage = () => {
   const handlePrivacySave = async () => {
     await updatePrivacy({ lastSeenVisible, readReceipts });
   };
+  const fetchStorageStats = async () => {
+  setIsLoadingStats(true);
+  try {
+    const res = await axiosInstance.get("/messages/storage-stats");
+    setStorageStats(res.data);
+  } catch (error) {
+    toast.error("Failed to load storage stats");
+  } finally {
+    setIsLoadingStats(false);
+  }
+};
 
   const requestNotificationPermission = async () => {
     if (Notification.permission === "default") {
@@ -351,6 +370,74 @@ const SettingsPage = () => {
               ))}
             </div>
           )}
+        </SettingRow>
+
+        {/* ── Storage Usage ── */}
+        <SettingRow
+          icon={<HardDrive size={18} />}
+          title="Storage Usage"
+          subtitle="Messages, images, audio"
+          isOpen={openSection === "storage"}
+          onClick={() => toggleSection("storage")}
+        >
+          {isLoadingStats ? (
+            <div style={{ color: "#636890", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+              Calculating...
+            </div>
+          ) : storageStats ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+              {/* Total */}
+              <div style={{ padding: "14px 16px", background: "rgba(108,123,255,0.08)", border: "1px solid rgba(108,123,255,0.15)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ color: "#818cf8", fontWeight: 700, fontSize: 14 }}>Total Messages</div>
+                <div style={{ color: "#818cf8", fontWeight: 800, fontSize: 22 }}>{storageStats.totalMessages}</div>
+              </div>
+
+              {/* Breakdown */}
+              {[
+                { label: "💬 Text Messages", value: storageStats.textMessages, color: "#6c7bff" },
+                { label: "📷 Image Messages", value: storageStats.imageMessages, color: "#10b981" },
+                { label: "🎤 Voice Messages", value: storageStats.audioMessages, color: "#f59e0b" },
+                { label: "🗑️ Deleted Messages", value: storageStats.deletedMessages, color: "#ef4444" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{ padding: "12px 16px", background: "#252740", borderRadius: 14 }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ color: "#e8eaf6", fontSize: 13, fontWeight: 600 }}>{item.label}</span>
+                    <span style={{ color: item.color, fontSize: 13, fontWeight: 700 }}>{item.value}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ height: 4, background: "#1c1e2e", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%",
+                      width: storageStats.totalMessages > 0
+                        ? `${Math.round((item.value / storageStats.totalMessages) * 100)}%`
+                        : "0%",
+                      background: item.color,
+                      borderRadius: 4,
+                      transition: "width 0.6s ease",
+                    }} />
+                  </div>
+                  <div style={{ color: "#636890", fontSize: 11, marginTop: 4 }}>
+                    {storageStats.totalMessages > 0
+                      ? `${Math.round((item.value / storageStats.totalMessages) * 100)}% of total`
+                      : "0% of total"}
+                  </div>
+                </div>
+              ))}
+
+              {/* Refresh button */}
+              <button
+                onClick={fetchStorageStats}
+                style={{ padding: "11px", background: "#252740", color: "#818cf8", borderRadius: 12, fontWeight: 700, fontSize: 13, border: "1px solid rgba(108,123,255,0.2)", cursor: "pointer" }}
+              >
+                🔄 Refresh Stats
+              </button>
+
+            </div>
+          ) : null}
         </SettingRow>
 
         {/* ── Profile Edit ── */}

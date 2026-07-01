@@ -88,6 +88,7 @@ export const useChatStore = create<any>((set, get) => ({
   socket.off("newMessage");
   socket.off("newGroupMessage");
   socket.off("messageDeletedEveryone");
+  socket.off("reactionUpdated");
 
   socket.on("newMessage", (newMessage: any) => {
     // Notification
@@ -132,6 +133,13 @@ export const useChatStore = create<any>((set, get) => ({
       ),
     });
   });
+  socket.on("reactionUpdated", ({ messageId, reactions }: any) => {
+  set({
+    messages: get().messages.map((m: any) =>
+      m._id === messageId ? { ...m, reactions } : m
+    ),
+  });
+});
 },
 
   unsubscribeFromMessages: () => {
@@ -140,6 +148,7 @@ export const useChatStore = create<any>((set, get) => ({
       socket.off("newMessage");
       socket.off("newGroupMessage");
       socket.off("messageDeletedEveryone");
+      socket.off("reactionUpdated");
     }
   },
 
@@ -168,6 +177,20 @@ export const useChatStore = create<any>((set, get) => ({
       toast.error("Failed to delete message");
     }
   },
+
+
+  toggleReaction: async (messageId: string, emoji: string) => {
+  try {
+    const res = await axiosInstance.post(`/messages/react/${messageId}`, { emoji });
+    set({
+      messages: get().messages.map((m: any) =>
+        m._id === messageId ? { ...m, reactions: res.data.reactions } : m
+      ),
+    });
+  } catch (error: any) {
+    toast.error("Failed to react");
+  }
+},
 
   clearChat: async (userId: string) => {
   try {
