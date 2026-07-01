@@ -5,6 +5,7 @@ interface IUser extends Document {
   email: string;
   password: string;
   profilePic: string;
+  bio?: string;
   phoneNumber?: string;
   lastSeen: Date;
   contacts: mongoose.Types.ObjectId[];
@@ -30,6 +31,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true, minlength: 6 },
     profilePic: { type: String, default: "" },
+    bio: { type: String, default: "", maxlength: 150 },
     phoneNumber: { type: String, unique: true, sparse: true },
     lastSeen: { type: Date, default: Date.now },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

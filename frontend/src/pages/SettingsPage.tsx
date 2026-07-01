@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info } from "lucide-react";
+import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info, User, Camera } from "lucide-react";
+
 
 
 const WALLPAPERS = [
@@ -57,13 +58,40 @@ const SettingRow = ({
 
 const SettingsPage = () => {
   const { fontSize, setFontSize, wallpaper, setWallpaper } = useThemeStore();
- const { authUser, updatePrivacy, blockedUsersList, fetchBlockedUsers, unblockUser, isLoadingBlocked } = useAuthStore();
+const { authUser, updatePrivacy, updateProfile, blockedUsersList, fetchBlockedUsers, unblockUser, isLoadingBlocked } = useAuthStore();
 
   const [lastSeenVisible, setLastSeenVisible] = useState(authUser?.privacy?.lastSeenVisible ?? true);
   const [readReceipts, setReadReceipts] = useState(authUser?.privacy?.readReceipts ?? true);
 
   // Only one section open at a time
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [editName, setEditName] = useState(authUser?.fullName || "");
+const [editBio, setEditBio] = useState(authUser?.bio || "");
+const [editPic, setEditPic] = useState<string | null>(null);
+const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+const fileInputRef = useRef<HTMLInputElement>(null);
+
+const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onloadend = () => setEditPic(reader.result as string);
+  reader.readAsDataURL(file);
+};
+
+const handleProfileSave = async () => {
+  setIsUpdatingProfile(true);
+  try {
+    await updateProfile({
+      fullName: editName,
+      bio: editBio,
+      ...(editPic && { profilePic: editPic }),
+    });
+    setEditPic(null);
+  } finally {
+    setIsUpdatingProfile(false);
+  }
+};
   useEffect(() => {
   if (openSection === "blocked") {
     fetchBlockedUsers();
@@ -311,6 +339,124 @@ const SettingsPage = () => {
               ))}
             </div>
           )}
+        </SettingRow>
+
+        {/* ── Profile Edit ── */}
+        <SettingRow
+          icon={<User size={18} />}
+          title="Edit Profile"
+          subtitle={authUser?.fullName || "Update your info"}
+          isOpen={openSection === "profile"}
+          onClick={() => toggleSection("profile")}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Avatar picker */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              <div style={{ position: "relative", width: 80, height: 80 }}>
+                <img
+                  src={editPic || authUser?.profilePic || "/avatar.png"}
+                  alt="profile"
+                  style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid #6c7bff" }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    position: "absolute", bottom: 0, right: 0,
+                    width: 26, height: 26, borderRadius: "50%",
+                    background: "#6c7bff", border: "2px solid #1c1e2e",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer"
+                  }}
+                >
+                  <Camera size={13} color="#fff" />
+                </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handlePicChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+              {editPic && (
+                <button
+                  onClick={() => setEditPic(null)}
+                  style={{ fontSize: 11, color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  Remove new photo
+                </button>
+              )}
+            </div>
+
+            {/* Name input */}
+            <div>
+              <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
+                Display Name
+              </div>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                maxLength={50}
+                placeholder="Your name"
+                style={{
+                  width: "100%", padding: "12px 16px", background: "#252740",
+                  border: "1.5px solid rgba(255,255,255,.06)", borderRadius: 12,
+                  color: "#e8eaf6", fontSize: 14, outline: "none",
+                  boxSizing: "border-box"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#6c7bff"}
+                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,.06)"}
+              />
+            </div>
+
+            {/* Bio input */}
+            <div>
+              <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
+                Bio <span style={{ color: "#3a3c52", textTransform: "none", letterSpacing: 0 }}>({editBio.length}/150)</span>
+              </div>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={150}
+                placeholder="Write something about yourself..."
+                rows={3}
+                style={{
+                  width: "100%", padding: "12px 16px", background: "#252740",
+                  border: "1.5px solid rgba(255,255,255,.06)", borderRadius: 12,
+                  color: "#e8eaf6", fontSize: 14, outline: "none", resize: "none",
+                  fontFamily: "inherit", boxSizing: "border-box"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#6c7bff"}
+                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,.06)"}
+              />
+            </div>
+
+            {/* Email (read-only) */}
+            <div>
+              <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
+                Email
+              </div>
+              <div style={{ padding: "12px 16px", background: "#1c1e2e", borderRadius: 12, color: "#636890", fontSize: 14 }}>
+                {authUser?.email}
+              </div>
+            </div>
+
+            {/* Save button */}
+            <button
+              onClick={handleProfileSave}
+              disabled={isUpdatingProfile || (!editName.trim())}
+              style={{
+                padding: "13px", background: isUpdatingProfile ? "#3a3c52" : "#6c7bff",
+                color: "#fff", borderRadius: 12, fontWeight: 700, fontSize: 14,
+                border: "none", cursor: isUpdatingProfile ? "not-allowed" : "pointer",
+                transition: "background .2s"
+              }}
+            >
+              {isUpdatingProfile ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
         </SettingRow>
 {/* ── About ── */}
 <SettingRow
