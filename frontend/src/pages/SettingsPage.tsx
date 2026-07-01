@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useThemeStore } from "../store/useThemeStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info, User, Camera } from "lucide-react";
-
-
+import { Type, Image, Shield, ChevronDown, Settings as SettingsIcon, UserX, Info, User, Camera, Bell } from "lucide-react";
 
 const WALLPAPERS = [
   { id: "none", label: "None", style: { background: "var(--fallback-b1,oklch(var(--b1)))" } },
@@ -58,49 +56,65 @@ const SettingRow = ({
 
 const SettingsPage = () => {
   const { fontSize, setFontSize, wallpaper, setWallpaper } = useThemeStore();
-const { authUser, updatePrivacy, updateProfile, blockedUsersList, fetchBlockedUsers, unblockUser, isLoadingBlocked } = useAuthStore();
+  const { authUser, updatePrivacy, updateProfile, blockedUsersList, fetchBlockedUsers, unblockUser, isLoadingBlocked } = useAuthStore();
 
   const [lastSeenVisible, setLastSeenVisible] = useState(authUser?.privacy?.lastSeenVisible ?? true);
   const [readReceipts, setReadReceipts] = useState(authUser?.privacy?.readReceipts ?? true);
 
+  // ✅ फिक्स 1: नोटिफिकेशन से जुड़ी स्टेट वेरिएबल्स जोड़े
+  const [notificationsEnabled, setNotificationsEnabled] = useState(Notification.permission === "granted");
+  const [notificationSound, setNotificationSound] = useState(true);
+  const [notificationPreview, setNotificationPreview] = useState(true);
+
   // Only one section open at a time
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [editName, setEditName] = useState(authUser?.fullName || "");
-const [editBio, setEditBio] = useState(authUser?.bio || "");
-const [editPic, setEditPic] = useState<string | null>(null);
-const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editBio, setEditBio] = useState(authUser?.bio || "");
+  const [editPic, setEditPic] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onloadend = () => setEditPic(reader.result as string);
-  reader.readAsDataURL(file);
-};
+  const handlePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setEditPic(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
-const handleProfileSave = async () => {
-  setIsUpdatingProfile(true);
-  try {
-    await updateProfile({
-      fullName: editName,
-      bio: editBio,
-      ...(editPic && { profilePic: editPic }),
-    });
-    setEditPic(null);
-  } finally {
-    setIsUpdatingProfile(false);
-  }
-};
+  const handleProfileSave = async () => {
+    setIsUpdatingProfile(true);
+    try {
+      await updateProfile({
+        fullName: editName,
+        bio: editBio,
+        ...(editPic && { profilePic: editPic }),
+      });
+      setEditPic(null);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
   useEffect(() => {
-  if (openSection === "blocked") {
-    fetchBlockedUsers();
-  }
-}, [openSection]);
+    if (openSection === "blocked") {
+      fetchBlockedUsers();
+    }
+  }, [openSection]);
+
   const toggleSection = (id: string) => setOpenSection((prev) => (prev === id ? null : id));
 
   const handlePrivacySave = async () => {
     await updatePrivacy({ lastSeenVisible, readReceipts });
+  };
+
+  const requestNotificationPermission = async () => {
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+      }
+    }
   };
 
   return (
@@ -215,8 +229,7 @@ const handleProfileSave = async () => {
           onClick={() => toggleSection("privacy")}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Last seen toggle */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifycontent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
               <div>
                 <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Last Seen</div>
                 <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
@@ -244,7 +257,6 @@ const handleProfileSave = async () => {
               </label>
             </div>
 
-            {/* Read receipts toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
               <div>
                 <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Read Receipts</div>
@@ -273,7 +285,6 @@ const handleProfileSave = async () => {
               </label>
             </div>
 
-            {/* Save button */}
             <button
               onClick={handlePrivacySave}
               style={{ padding: "12px", background: "#6c7bff", color: "#fff", borderRadius: 12, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer" }}
@@ -282,6 +293,7 @@ const handleProfileSave = async () => {
             </button>
           </div>
         </SettingRow>
+
         {/* ── Blocked Users ── */}
         <SettingRow
           icon={<UserX size={18} />}
@@ -350,8 +362,6 @@ const handleProfileSave = async () => {
           onClick={() => toggleSection("profile")}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-            {/* Avatar picker */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
               <div style={{ position: "relative", width: 80, height: 80 }}>
                 <img
@@ -389,7 +399,6 @@ const handleProfileSave = async () => {
               )}
             </div>
 
-            {/* Name input */}
             <div>
               <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
                 Display Name
@@ -406,12 +415,9 @@ const handleProfileSave = async () => {
                   color: "#e8eaf6", fontSize: 14, outline: "none",
                   boxSizing: "border-box"
                 }}
-                onFocus={(e) => e.target.style.borderColor = "#6c7bff"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,.06)"}
               />
             </div>
 
-            {/* Bio input */}
             <div>
               <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
                 Bio <span style={{ color: "#3a3c52", textTransform: "none", letterSpacing: 0 }}>({editBio.length}/150)</span>
@@ -428,12 +434,9 @@ const handleProfileSave = async () => {
                   color: "#e8eaf6", fontSize: 14, outline: "none", resize: "none",
                   fontFamily: "inherit", boxSizing: "border-box"
                 }}
-                onFocus={(e) => e.target.style.borderColor = "#6c7bff"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,.06)"}
               />
             </div>
 
-            {/* Email (read-only) */}
             <div>
               <div style={{ color: "#636890", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>
                 Email
@@ -443,7 +446,6 @@ const handleProfileSave = async () => {
               </div>
             </div>
 
-            {/* Save button */}
             <button
               onClick={handleProfileSave}
               disabled={isUpdatingProfile || (!editName.trim())}
@@ -458,90 +460,213 @@ const handleProfileSave = async () => {
             </button>
           </div>
         </SettingRow>
-{/* ── About ── */}
-<SettingRow
-  icon={<Info size={18} />}
-  title="About"
-  subtitle="Version, developer info"
-  isOpen={openSection === "about"}
-  onClick={() => toggleSection("about")}
->
-  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
-    {/* App version */}
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
-      <div>
-        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>App Version</div>
-        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>BlinkTalk v1.0.0</div>
-      </div>
-      <span style={{ fontSize: 11, color: "#636890", background: "#1c1e2e", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>Stable</span>
-    </div>
+        {/* ── Notifications ── */}
+        <SettingRow
+          icon={<Bell size={18} />}
+          title="Notifications"
+          subtitle={notificationsEnabled ? "On" : "Off"}
+          isOpen={openSection === "notifications"}
+          onClick={() => toggleSection("notifications")}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Notification.permission === "default" && (
+              <div style={{
+                padding: "12px 16px", background: "rgba(108,123,255,0.1)",
+                border: "1px solid rgba(108,123,255,0.2)", borderRadius: 14,
+                display: "flex", alignItems: "center", justifyContent: "space-between"
+              }}>
+                <div style={{ color: "#818cf8", fontSize: 13, fontWeight: 600 }}>
+                  Enable browser notifications?
+                </div>
+                <button
+                  onClick={requestNotificationPermission}
+                  style={{
+                    padding: "6px 14px", background: "#6c7bff", color: "#fff",
+                    borderRadius: 10, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer"
+                  }}
+                >
+                  Allow
+                </button>
+              </div>
+            )}
 
-    {/* Developer */}
-    <div style={{ padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
-      <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Developer</div>
-      <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Built with g-1 & by BlinkTalk Team</div>
-    </div>
+            {Notification.permission === "denied" && (
+              <div style={{
+                padding: "12px 16px", background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.15)", borderRadius: 14,
+                color: "#ef4444", fontSize: 12.5
+              }}>
+                🚫 Browser notifications blocked. Please enable from browser settings.
+              </div>
+            )}
 
-    {/* Help & Support */}
-    <a 
-      href="mailto:support@blinktalk.com"
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 16px", background: "#252740", borderRadius: 14,
-        textDecoration: "none"
-      }}
-    >
-      <div>
-        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Help & Support</div>
-        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>support@blinktalk.com</div>
-      </div>
-      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>Email →</span>
-    </a>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Notifications</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
+                  {notificationsEnabled ? "You will receive message alerts" : "All notifications are muted"}
+                </div>
+              </div>
+              <label style={{ position: "relative", width: 44, height: 24, flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={notificationsEnabled}
+                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: "absolute", inset: 0, borderRadius: 12, cursor: "pointer",
+                  background: notificationsEnabled ? "#6c7bff" : "#3a3c52",
+                  transition: "background .2s"
+                }}>
+                  <span style={{
+                    position: "absolute", top: 3, left: notificationsEnabled ? 22 : 3,
+                    width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                    transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.3)"
+                  }} />
+                </span>
+              </label>
+            </div>
 
-    {/* Privacy Policy */}
-    <a 
-      href="#"
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 16px", background: "#252740", borderRadius: 14,
-        textDecoration: "none"
-      }}
-    >
-      <div>
-        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Privacy Policy</div>
-        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>How we handle your data</div>
-      </div>
-      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
-    </a>
+            {notificationsEnabled && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+                <div>
+                  <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Sound</div>
+                  <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
+                    {notificationSound ? "Play sound on new message" : "Silent notifications"}
+                  </div>
+                </div>
+                <label style={{ position: "relative", width: 44, height: 24, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={notificationSound}
+                    onChange={(e) => setNotificationSound(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: "absolute", inset: 0, borderRadius: 12, cursor: "pointer",
+                    background: notificationSound ? "#6c7bff" : "#3a3c52",
+                    transition: "background .2s"
+                }}>
+                  <span style={{
+                    position: "absolute", top: 3, left: notificationSound ? 22 : 3,
+                    width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                    transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.3)"
+                  }} />
+                </span>
+              </label>
+            </div>
+            )}
 
-    {/* Terms */}
-    <a 
-      href="#"
-      style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 16px", background: "#252740", borderRadius: 14,
-        textDecoration: "none"
-      }}
-    >
-      <div>
-        <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Terms of Service</div>
-        <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Rules and guidelines</div>
-      </div>
-      <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
-    </a>
+            {notificationsEnabled && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+                <div>
+                  <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Message Preview</div>
+                  <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>
+                    {notificationPreview ? "Show message content in notification" : "Show only 'New message'"}
+                  </div>
+                </div>
+                <label style={{ position: "relative", width: 44, height: 24, flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={notificationPreview}
+                    onChange={(e) => setNotificationPreview(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: "absolute", inset: 0, borderRadius: 12, cursor: "pointer",
+                    background: notificationPreview ? "#6c7bff" : "#3a3c52",
+                    transition: "background .2s"
+                  }}>
+                    <span style={{
+                      position: "absolute", top: 3, left: notificationPreview ? 22 : 3,
+                      width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                      transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.3)"
+                    }} />
+                  </span>
+                </label>
+              </div>
+            )}
+          </div>
+        </SettingRow>
 
-    {/* Made with */}
-    <div style={{ textAlign: "center", color: "#3a3c52", fontSize: 11.5, padding: "8px 0 4px", fontWeight: 600, letterSpacing: ".04em" }}>
-      data is encrypted and secure
-    </div>
+        {/* ── About ── */}
+        <SettingRow
+          icon={<Info size={18} />}
+          title="About"
+          subtitle="Version, developer info"
+          isOpen={openSection === "about"}
+          onClick={() => toggleSection("about")}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>App Version</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>BlinkTalk v1.0.0</div>
+              </div>
+              <span style={{ fontSize: 11, color: "#636890", background: "#1c1e2e", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>Stable</span>
+            </div>
 
-  </div>
-</SettingRow>
-        
+            <div style={{ padding: "14px 16px", background: "#252740", borderRadius: 14 }}>
+              <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Developer</div>
+              <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Built with g-1 & by BlinkTalk Team</div>
+            </div>
+
+            <a 
+              href="mailto:support@blinktalk.com"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "14px 16px", background: "#252740", borderRadius: 14,
+                textDecoration: "none"
+              }}
+            >
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Help & Support</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>support@blinktalk.com</div>
+              </div>
+              <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>Email →</span>
+            </a>
+
+            <a 
+              href="#"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "14px 16px", background: "#252740", borderRadius: 14,
+                textDecoration: "none"
+              }}
+            >
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Privacy Policy</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>How we handle your data</div>
+              </div>
+              <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
+            </a>
+
+            <a 
+              href="#"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "14px 16px", background: "#252740", borderRadius: 14,
+                textDecoration: "none"
+              }}
+            >
+              <div>
+                <div style={{ color: "#e8eaf6", fontWeight: 600, fontSize: 14 }}>Terms of Service</div>
+                <div style={{ color: "#636890", fontSize: 12, marginTop: 2 }}>Rules and guidelines</div>
+              </div>
+              <span style={{ color: "#818cf8", fontSize: 12, fontWeight: 600 }}>View →</span>
+            </a>
+
+            <div style={{ textAlign: "center", color: "#3a3c52", fontSize: 11.5, padding: "8px 0 4px", fontWeight: 600, letterSpacing: ".04em" }}>
+              data is encrypted and secure
+            </div>
+          </div>
+        </SettingRow>
       </div>
     </div>
   );
 };
+
 
 export default SettingsPage;

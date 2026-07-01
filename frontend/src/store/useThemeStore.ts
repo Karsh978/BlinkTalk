@@ -7,6 +7,12 @@ interface ThemeState {
   setFontSize: (size: "small" | "medium" | "large") => void;
   wallpaper: string;
   setWallpaper: (wallpaper: string) => void;
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (val: boolean) => void;
+  notificationSound: boolean;
+  setNotificationSound: (val: boolean) => void;
+  notificationPreview: boolean;
+  setNotificationPreview: (val: boolean) => void;
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
@@ -27,5 +33,23 @@ export const useThemeStore = create<ThemeState>((set) => ({
   setWallpaper: (wallpaper) => {
     localStorage.setItem("chat-wallpaper", wallpaper);
     set({ wallpaper });
+  },
+
+  notificationsEnabled: localStorage.getItem("notif-enabled") !== "false",
+  setNotificationsEnabled: (val) => {
+    localStorage.setItem("notif-enabled", String(val));
+    set({ notificationsEnabled: val });
+  },
+
+  notificationSound: localStorage.getItem("notif-sound") !== "false",
+  setNotificationSound: (val) => {
+    localStorage.setItem("notif-sound", String(val));
+    set({ notificationSound: val });
+  },
+
+  notificationPreview: localStorage.getItem("notif-preview") !== "false",
+  setNotificationPreview: (val) => {
+    localStorage.setItem("notif-preview", String(val));
+    set({ notificationPreview: val });
   },
 }));

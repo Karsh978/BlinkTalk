@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
+// Import useThemeStore to prevent the runtime crash
+import { useThemeStore } from "./useThemeStore"; 
 import toast from "react-hot-toast";
 
 export const useChatStore = create<any>((set, get) => ({
@@ -13,25 +15,25 @@ export const useChatStore = create<any>((set, get) => ({
   isMessagesLoading: false,
 
   getUsers: async () => {
-  set({ isUsersLoading: true });
-  try {
-    const res = await axiosInstance.get("/auth/contacts"); // ✅ only my contacts
-    set({ users: res.data });
-  } catch (error) {
-    toast.error("Error loading contacts");
-  } finally {
-    set({ isUsersLoading: false });
-  }
-},
+    set({ isUsersLoading: true });
+    try {
+      const res = await axiosInstance.get("/auth/contacts");
+      set({ users: res.data });
+    } catch (error) {
+      toast.error("Error loading contacts");
+    } finally {
+      set({ isUsersLoading: false });
+    }
+  },
 
- getGroups: async () => {
-  try {
-    const res = await axiosInstance.get("/groups"); // ✅ correct endpoint
-    set({ groups: res.data || [] });
-  } catch (error) {
-    console.error("Error loading groups:", error);
-  }
-},
+  getGroups: async () => {
+    try {
+      const res = await axiosInstance.get("/groups");
+      set({ groups: res.data || [] });
+    } catch (error) {
+      console.error("Error loading groups:", error);
+    }
+  },
 
   setSelectedUser: (user: any) => {
     if (get().selectedUser?._id === user?._id) return;
@@ -82,14 +84,37 @@ export const useChatStore = create<any>((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     
+    // Prevent duplicate event attachments
     socket.off("newMessage");
     socket.off("newGroupMessage");
-    socket.off("messageDeletedEveryone"); // Cleanup old listener
+    socket.off("messageDeletedEveryone");
 
-    socket.on("newMessage", (msg: any) => {
-      const { selectedUser } = get();
-      if (selectedUser && msg.senderId === selectedUser._id) {
-        set({ messages: [...get().messages, msg] });
+    socket.on("newMessage", (newMessage: any) => {
+      // ── Browser Notification ──
+      const { notificationsEnabled, notificationSound, notificationPreview } = useThemeStore.getState();
+      const selectedUser = get().selectedUser;
+      const isChatOpen = selectedUser?._id === newMessage.senderId;
+      const isWindowFocused = document.hasFocus();
+
+      if (notificationsEnabled && (!isChatOpen || !isWindowFocused)) {
+        if (notificationSound) {
+          const audio = new Audio("/notification.mp3");
+          audio.volume = 0.5;
+          audio.play().catch(() => {});
+        }
+        if (Notification.permission === "granted") {
+          new Notification("BlinkTalk", {
+            body: notificationPreview
+              ? (newMessage.text || (newMessage.image ? "📷 Photo" : newMessage.audio ? "🎤 Voice message" : "New message"))
+              : "New message",
+            icon: "/logo.png",
+          });
+        }
+      }
+
+      // ── Message store update ──
+      if (selectedUser && newMessage.senderId === selectedUser._id) {
+        set({ messages: [...get().messages, newMessage] });
       }
     });
 
@@ -100,7 +125,6 @@ export const useChatStore = create<any>((set, get) => ({
       }
     });
 
-    // Updated real-time listener for "Delete for Everyone"
     socket.on("messageDeletedEveryone", (messageId: string) => {
       set({
         messages: get().messages.map((m: any) =>
@@ -125,14 +149,12 @@ export const useChatStore = create<any>((set, get) => ({
     try {
       await axiosInstance.post(`/messages/delete/${messageId}`, { type });
       
-      // Local state update
       if (type === "me") {
-        // "Delete for me" ke liye screen se message hata do
         set({ 
           messages: get().messages.filter((m: any) => m._id !== messageId) 
         });
       } else if (type === "everyone") {
-        // "Delete for everyone" ke liye sender ki screen par bhi placeholder show karo
+        // Optimistic local update for the sender
         set({
           messages: get().messages.map((m: any) =>
             m._id === messageId 
@@ -149,19 +171,17 @@ export const useChatStore = create<any>((set, get) => ({
     }
   },
 
-
   addContact: async (contactId: string) => {
-  try {
-    const res = await axiosInstance.post("/auth/add-contact", { contactId });
-    // Add to local list immediately
-    set({ users: [...get().users, res.data] });
-    toast.success("Contact added!");
-    return true;
-  } catch (error: any) {
-    toast.error(error?.response?.data?.message || "Failed to add contact");
-    return false;
-  }
-},
+    try {
+      const res = await axiosInstance.post("/auth/add-contact", { contactId });
+      set({ users: [...get().users, res.data] });
+      toast.success("Contact added!");
+      return true;
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to add contact");
+      return false;
+    }
+  },
 
   getRecentChats: async () => {
     try {
@@ -173,13 +193,12 @@ export const useChatStore = create<any>((set, get) => ({
   },
 
   createGroup: async ({ name, members }: { name: string; members: string[] }) => {
-  try {
-    const res = await axiosInstance.post("/groups/create", { name, members });
-    // Add new group to local list instantly
-    set({ groups: [...get().groups, res.data] });
-    toast.success("Group created!");
-  } catch (error) {
-    toast.error("Failed to create group");
-  }
-},
+    try {
+      const res = await axiosInstance.post("/groups/create", { name, members });
+      set({ groups: [...get().groups, res.data] });
+      toast.success("Group created!");
+    } catch (error) {
+      toast.error("Failed to create group");
+    }
+  },
 }));
