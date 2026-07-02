@@ -31,23 +31,25 @@ const useLongPress = (callback: () => void, ms = 600) => {
   };
 };
 
-// ── Sub-Component: MessageBubble (With Seen/Unseen Status Ticks) ──
+// ── Sub-Component: MessageBubble (With Emoji Reactions Fixed) ──
 const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLongPress: () => void; authUser: any }) => {
   const isMe = message.senderId === authUser._id || message.senderId?._id === authUser._id;
   const longPressEvent = useLongPress(onLongPress);
-  
-  // State for emoji bar toggle (Make sure to define or handle this state if needed)
+
+  // 1. STATE DEFINITIONS (Ab error nahi aayega)
   const [showEmojiBar, setShowEmojiBar] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+
+  const emojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
   return (
-    // Added "group" class here as requested
     <div 
       {...(!message.isDeleted ? longPressEvent : {})} 
-      className={`chat ${isMe ? "chat-end" : "chat-start"} select-none group ${!message.isDeleted ? "cursor-pointer" : "cursor-default"}`}
+      className={`chat ${isMe ? "chat-end" : "chat-start"} select-none group relative ${!message.isDeleted ? "cursor-pointer" : "cursor-default"}`}
     >
       {/* Chat Bubble Structure */}
       <div 
-        className={`chat-bubble max-w-[85%] text-sm p-3 shadow-sm transition-all duration-200 ${
+        className={`chat-bubble max-w-[85%] text-sm p-3 shadow-sm transition-all duration-200 relative ${
           message.isDeleted 
             ? "bg-base-300 opacity-50 text-base-content/70" 
             : isMe 
@@ -84,15 +86,45 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
                 />
               </div>
             )}
+
+            {/* Rendered Reaction Badge if selected */}
+            {selectedEmoji && (
+              <div className={`absolute -bottom-2.5 ${isMe ? "left-2" : "right-2"} bg-base-100 border border-base-300 px-1 rounded-full text-xs shadow-sm`}>
+                {selectedEmoji}
+              </div>
+            )}
           </>
         )}
       </div>
-
-      {/* Emoji reaction trigger (Added right under the message bubble) */}
+      
+      {/* 2. Emoji Picker and Reaction Button container */}
       {!message.isDeleted && (
-        <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+        <div className={`flex flex-col items-center gap-1 mt-1 relative z-20 ${isMe ? "items-end" : "items-start"}`}>
+          
+          {/* Real Multiple Emoji Picker Panel */}
+          {showEmojiBar && (
+            <div className="flex gap-1.5 p-1 bg-base-200 border border-base-300 shadow-xl rounded-full absolute bottom-7 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              {emojis.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    setSelectedEmoji(emoji);
+                    setShowEmojiBar(false);
+                  }}
+                  className="hover:scale-125 transition-transform p-0.5 text-sm"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Trigger Trigger Button */}
           <button
-            onClick={() => setShowEmojiBar((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevents triggers from bubbling up
+              setShowEmojiBar((v) => !v);
+            }}
             className="opacity-0 group-hover:opacity-100 text-base-content/40 hover:text-base-content/70 text-xs px-1.5 py-0.5 rounded-full hover:bg-base-200 transition-all duration-150"
           >
             😊
@@ -104,7 +136,6 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
       {isMe && !message.isDeleted && (
         <div className="chat-footer opacity-70 text-[10px] flex items-center gap-1 mt-0.5">
           {message.isSeen ? (
-            // Double blue tick — seen
             <span className="flex text-blue-400" title="Seen">
               <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
                 <path d="M1 5l3 3L10 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -112,14 +143,12 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
               </svg>
             </span>
           ) : (
-            // Single grey tick — sent but not seen
             <span className="flex opacity-50" title="Sent">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                 <path d="M1 5l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-          )
-          }
+          )}
         </div>
       )}
     </div>
@@ -165,6 +194,7 @@ const ChatContainer = () => {
       await deleteMessage(deleteMenu.msgId, type);
     } catch (error) {
       console.error("Error deleting message:", error);
+          // Error handling
     } finally {
       setDeleteMenu({ ...deleteMenu, isOpen: false });
     }
@@ -263,15 +293,15 @@ const ChatContainer = () => {
             </button>
           )}
           {/* Clear Chat Button */}
-          {selectedUser && (
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150"
-              title="Clear chat"
-            >
-              <Trash2 size={18} />
-            </button>
-          )}
+{selectedUser && (
+  <button
+    onClick={() => setShowClearConfirm(true)}
+    className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150"
+    title="Clear chat"
+  >
+    <Trash2 size={18} />
+  </button>
+)}
           
 
           {/* Voice Call Button */}
@@ -310,7 +340,7 @@ const ChatContainer = () => {
           ...(wallpaper === "diagonal"  && { backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(128,128,128,0.06) 5px, rgba(128,128,128,0.06) 6px)" }),
           ...(wallpaper === "gradient1" && { background: "linear-gradient(135deg, rgba(255,154,100,0.15), rgba(208,112,150,0.15))" }),
           ...(wallpaper === "gradient2" && { background: "linear-gradient(135deg, rgba(100,200,255,0.15), rgba(50,100,200,0.15))" }),
-          ...(wallpaper === "gradient3" && { background: "linear-gradient(135deg, rgba(100,200,100,0.15), rgba(50,150,80,0.15))" }),
+          ...(wallpaper === "gradient3" && { background: "linear-gradient(135deg, rgba(100,200,10 green,0.15), rgba(50,150,80,0.15))" }),
         }}
       >
         {messages.map((message: any) => (
@@ -367,40 +397,40 @@ const ChatContainer = () => {
                 Cancel
               </button>
               {/* Clear Chat Confirmation */}
-              {showClearConfirm && (
-                <div
-                  className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
-                  onClick={() => setShowClearConfirm(false)}
-                >
-                  <div
-                    className="bg-base-100 w-full max-w-md rounded-t-3xl p-6"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
-                    <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
-                    <p className="text-sm text-base-content/60 text-center mb-6">
-                      All messages will be deleted for you only. This cannot be undone.
-                    </p>
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={async () => {
-                          await clearChat(selectedUser._id);
-                          setShowClearConfirm(false);
-                        }}
-                        className="btn btn-error normal-case"
-                      >
-                        🗑️ Clear for me
-                      </button>
-                      <button
-                        onClick={() => setShowClearConfirm(false)}
-                        className="btn btn-outline mt-2 normal-case"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+{showClearConfirm && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+    onClick={() => setShowClearConfirm(false)}
+  >
+    <div
+      className="bg-base-100 w-full max-w-md rounded-t-3xl p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
+      <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
+      <p className="text-sm text-base-content/60 text-center mb-6">
+        All messages will be deleted for you only. This cannot be undone.
+      </p>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={async () => {
+            await clearChat(selectedUser._id);
+            setShowClearConfirm(false);
+          }}
+          className="btn btn-error normal-case"
+        >
+          🗑️ Clear for me
+        </button>
+        <button
+          onClick={() => setShowClearConfirm(false)}
+          className="btn btn-outline mt-2 normal-case"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
             </div>
           </div>
         </div>
