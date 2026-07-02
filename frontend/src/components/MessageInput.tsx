@@ -5,7 +5,7 @@ import { Image as ImageIcon, Send, Smile, X, Mic, Square } from "lucide-react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import MediaPanel from "./MediaPanel"; 
 
-const MessageInput = () => {
+const MessageInput = ({ replyingTo, onReplySent }: { replyingTo?: any; onReplySent?: () => void }) => {
   const [text, setText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMedia, setShowMedia] = useState(false); 
@@ -117,7 +117,12 @@ const MessageInput = () => {
       socket.emit("stopTyping", { senderId: authUser._id, receiverId: selectedUser._id });
     }
     try {
-      await sendMessage({ text: text.trim(), image: imagePreview });
+     await sendMessage({ 
+  text: text.trim(), 
+  image: imagePreview,
+  replyTo: replyingTo?._id || null,
+});
+onReplySent?.();
       setText("");
       setImagePreview(null);
       setShowEmojiPicker(false);
