@@ -10,6 +10,7 @@ interface IMessage extends Document {
   audio?: string;
   isSeen: boolean;
   isDeleted: boolean;
+  replyTo?: mongoose.Types.ObjectId;
   deletedBy: mongoose.Types.ObjectId[];
   reactions: {
   emoji: string;
@@ -25,6 +26,7 @@ const messageSchema = new mongoose.Schema(
     text: { type: String },
     image: { type: String },
     audio: { type: String, default: null },
+    replyTo: { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
     isSeen: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     reactions: [

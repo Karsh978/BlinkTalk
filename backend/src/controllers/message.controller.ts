@@ -28,14 +28,14 @@ export const getMessages = async (req: any, res: Response) => {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
-    const messages = await Message.find({
-      $or: [
-        { senderId: myId, receiverId: userToChatId },
-        { senderId: userToChatId, receiverId: myId },
-      ],
-      groupId: null,
-      deletedBy: { $ne: myId }
-    });
+   const messages = await Message.find({
+  $or: [
+    { senderId: myId, receiverId: userToChatId },
+    { senderId: userToChatId, receiverId: myId },
+  ],
+  groupId: null,
+  deletedBy: { $ne: myId },
+}).populate("replyTo", "text image audio senderId isDeleted"); // ← ADD KARO
 
     res.status(200).json(messages);
   } catch (error) {
@@ -58,9 +58,10 @@ export const getGroupMessages = async (req: any, res: Response) => {
 
 export const sendMessage = async (req: any, res: Response) => {
   try {
-    const { text, image, audio } = req.body;
+   const { text, image, audio, replyTo } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+    
     
     const blocked = await isBlockedEitherWay(senderId.toString(), receiverId);
     if (blocked) {
@@ -81,13 +82,14 @@ export const sendMessage = async (req: any, res: Response) => {
       audioUrl = uploadResponse.secure_url;
     }
 
-    const newMessage = new Message({
-      senderId,
-      receiverId,
-      text,
-      image: imageUrl,
-      audio: audioUrl,
-    });
+   const newMessage = new Message({
+  senderId,
+  receiverId,
+  text,
+  image: imageUrl,
+  audio: audioUrl,
+  replyTo: replyTo || null,
+});
 
     await newMessage.save();
 

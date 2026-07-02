@@ -96,6 +96,35 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
           </>
         )}
       </div>
+
+
+      {/* Reply preview — agar ye message kisi ka reply hai */}
+{message.replyTo && !message.replyTo.isDeleted && (
+  <div className={`text-xs px-3 py-2 mb-2 rounded-lg border-l-4 ${
+    isMe 
+      ? "bg-primary-content/10 border-primary-content/40 text-primary-content/70" 
+      : "bg-base-300 border-primary text-base-content/60"
+  }`}>
+    <div className="font-semibold mb-0.5 text-[10px] uppercase tracking-wide opacity-70">
+      Replied to
+    </div>
+    {message.replyTo.image && (
+      <div className="flex items-center gap-1">
+        <span>📷</span>
+        <span>Photo</span>
+      </div>
+    )}
+    {message.replyTo.audio && (
+      <div className="flex items-center gap-1">
+        <span>🎤</span>
+        <span>Voice message</span>
+      </div>
+    )}
+    {message.replyTo.text && (
+      <p className="truncate max-w-[200px]">{message.replyTo.text}</p>
+    )}
+  </div>
+)}
       
       {/* 2. Emoji Picker and Reaction Button container */}
       {!message.isDeleted && (
@@ -187,6 +216,7 @@ const ChatContainer = () => {
     msgId: "",
     isSender: false
   });
+  const [replyingTo, setReplyingTo] = useState<any>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleDelete = async (type: "me" | "everyone") => {
