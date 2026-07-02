@@ -210,6 +210,7 @@ const ChatContainer = () => {
   } = useChatStore();
 
   const { authUser, socket, toggleBlock } = useAuthStore();
+  const [isTyping, setIsTyping] = useState(false);
   const { fontSize, wallpaper } = useThemeStore();
   const scrollRef = useRef<any>(null);
 
@@ -255,12 +256,29 @@ const [forwardSearch, setForwardSearch] = useState("");
           }));
         }
       });
+      if (socket && selectedUser) {
+  socket.on("typing", ({ senderId }: any) => {
+    if (senderId?.toString() === selectedUser._id?.toString()) {
+      setIsTyping(true);
+    }
+  });
+
+  socket.on("stopTyping", ({ senderId }: any) => {
+    if (senderId?.toString() === selectedUser._id?.toString()) {
+      setIsTyping(false);
+    }
+  });
+}
     }
 
     return () => {
-      unsubscribeFromMessages();
-      if (socket) socket.off("messagesSeen");
-    };
+  unsubscribeFromMessages();
+  if (socket) {
+    socket.off("messagesSeen");
+    socket.off("typing");      // ← ADD
+    socket.off("stopTyping");  // ← ADD
+  }
+};
   }, [selectedUser?._id, selectedGroup?._id, socket]);
 
   useEffect(() => {
@@ -294,9 +312,21 @@ const [forwardSearch, setForwardSearch] = useState("");
             <h3 className="font-bold text-sm truncate">
               {selectedUser ? selectedUser.fullName : selectedGroup?.name}
             </h3>
-            <p className="text-[10px] opacity-60">
-              {selectedUser ? (isBlocked ? "Blocked" : "Online") : "Group Chat"}
-            </p>
+          <p className="text-[10px] opacity-60">
+  {selectedUser ? (
+    isBlocked ? "Blocked" :
+    isTyping ? (
+      <span className="text-emerald-500 flex items-center gap-1">
+        typing
+        <span className="flex gap-0.5">
+          <span className="size-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="size-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="size-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        </span>
+      </span>
+    ) : "Online"
+  ) : "Group Chat"}
+</p>
           </div>
         </div>
 
@@ -433,7 +463,7 @@ const [forwardSearch, setForwardSearch] = useState("");
           className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
           onClick={() => setShowClearConfirm(false)}
         >
-          <div className="bg-base-100 w-full max-w-md rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className= "bg-base-100 w-full max-w-md rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
             <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
             <p className="text-sm text-base-content/60 text-center mb-6">

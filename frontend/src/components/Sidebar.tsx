@@ -11,7 +11,7 @@ import StatusViewer from "./StatusViewer";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, groups, getGroups, selectedGroup, setSelectedGroup, isUsersLoading } = useChatStore();
-  const { onlineUsers, authUser } = useAuthStore();
+const { onlineUsers, authUser, socket } = useAuthStore();
   const { statusGroups, getStatuses } = useStatusStore();
 
   const [search, setSearch]                   = useState("");
@@ -123,14 +123,16 @@ const Sidebar = () => {
           >
             <div className="relative shrink-0">
               <img src={user.profilePic || "/avatar.png"} className="size-12 rounded-full object-cover border-2 border-white shadow-sm" />
-              {onlineUsers.includes(user._id) && (
+             {onlineUsers.some((id: string) => id?.toString() === user._id?.toString()) && (
                 <span className="absolute bottom-0.5 right-0.5 size-3 bg-green-500 rounded-full border-2 border-white" />
               )}
             </div>
             <div className="text-left overflow-hidden">
               <div className="font-bold text-gray-800 truncate">{user.fullName}</div>
               <div className="text-[11px] text-gray-400 truncate">
-                {onlineUsers.includes(user._id) ? "Active Now" : formatLastSeen(user.lastSeen)}
+              {onlineUsers.some((id: string) => id?.toString() === user._id?.toString()) 
+  ? "🟢 Active Now" 
+  : formatLastSeen(user.lastSeen)}
               </div>
             </div>
           </button>
