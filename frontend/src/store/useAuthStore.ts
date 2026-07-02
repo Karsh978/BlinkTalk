@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { useChatStore } from "./useChatStore";
 
 const BASE_URL = import.meta.env.MODE === "development" 
   ? "http://localhost:5001" 
@@ -144,8 +145,27 @@ unblockUser: async (userId: string) => {
     set({ socket: socket });
 
     socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
+  set({ onlineUsers: userIds });
+  
+  // ✅ Agar selectedUser online hai to uska lastSeen update karo
+  const { selectedUser } = useChatStore.getState();
+  if (selectedUser && userIds.some((id: string) => id?.toString() === selectedUser._id?.toString())) {
+    useChatStore.setState({
+      selectedUser: { ...selectedUser, lastSeen: new Date() }
     });
+  }
+});
+
+// Har 30 second mein online status refresh karo
+const pingInterval = setInterval(() => {
+  if (get().socket?.connected) {
+    get().socket.emit("ping_online");
+  }
+}, 30000);
+
+socket.on("disconnect", () => {
+  clearInterval(pingInterval);
+});
   },
 
   disconnectSocket: () => {

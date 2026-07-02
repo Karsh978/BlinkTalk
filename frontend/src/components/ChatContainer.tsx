@@ -216,6 +216,9 @@ const { authUser, socket, toggleBlock, onlineUsers } = useAuthStore();
 
   const isBlocked = authUser?.blockedUsers?.includes(selectedUser?._id);
   const isOnline = onlineUsers.some((id: string) => id?.toString() === selectedUser?._id?.toString());
+  isOnline 
+  ? <span className="text-emerald-500 font-medium">Online</span>
+  : formatLastSeen(selectedUser.lastSeen)
 
   const [deleteMenu, setDeleteMenu] = useState<{ isOpen: boolean; msgId: string; isSender: boolean }>({
     isOpen: false, msgId: "", isSender: false,
