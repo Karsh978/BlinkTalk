@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Phone, Video, Ban, Trash2, X } from "lucide-react";
+import { ChevronLeft, Phone, Video, Ban, Trash2, X, Search } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
 import { axiosInstance } from "../lib/axios";
+
 import { useCallStore } from "../store/useCallStore";
 
 const useLongPress = (callback: () => void, ms = 600) => {
@@ -204,6 +205,8 @@ const ChatContainer = () => {
     setSelectedUser, setSelectedGroup,
     subscribeToMessages, unsubscribeFromMessages,
     deleteMessage, clearChat, toggleReaction,
+      forwardMessage, // ← ADD
+  users,          // ← ADD
   } = useChatStore();
 
   const { authUser, socket, toggleBlock } = useAuthStore();
@@ -217,6 +220,10 @@ const ChatContainer = () => {
   });
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [forwardMenu, setForwardMenu] = useState<{ isOpen: boolean; msgId: string }>({
+  isOpen: false, msgId: "",
+});
+const [forwardSearch, setForwardSearch] = useState("");
 
   const handleDelete = async (type: "me" | "everyone") => {
     try {
@@ -398,6 +405,15 @@ const ChatContainer = () => {
               <button onClick={() => handleDelete("me")} className="btn btn-ghost justify-start gap-3 normal-case">
                 🗑️ Delete for me
               </button>
+              <button
+  onClick={() => {
+    setForwardMenu({ isOpen: true, msgId: deleteMenu.msgId });
+    setDeleteMenu({ ...deleteMenu, isOpen: false });
+  }}
+  className="btn btn-ghost justify-start gap-3 normal-case"
+>
+  ↪️ Forward message
+</button>
               {deleteMenu.isSender && (
                 <button onClick={() => handleDelete("everyone")} className="btn btn-ghost justify-start gap-3 text-error normal-case">
                   🌎 Delete for everyone
@@ -437,8 +453,82 @@ const ChatContainer = () => {
           </div>
         </div>
       )}
+
+      {/* Forward Message Modal */}
+{forwardMenu.isOpen && (
+  <div
+    className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+    onClick={() => { setForwardMenu({ isOpen: false, msgId: "" }); setForwardSearch(""); }}
+  >
+    <div
+      className="bg-base-100 w-full max-w-md rounded-t-3xl p-6 max-h-[70vh] flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4" />
+      <h3 className="font-bold text-lg mb-4 text-center">Forward to</h3>
+
+      {/* Search bar */}
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={forwardSearch}
+          onChange={(e) => setForwardSearch(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 bg-base-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
+      {/* Contacts list */}
+      <div className="overflow-y-auto flex flex-col gap-2 flex-1">
+        {users
+          .filter((u: any) =>
+            u.fullName.toLowerCase().includes(forwardSearch.toLowerCase())
+          )
+          .map((u: any) => (
+            <button
+              key={u._id}
+              onClick={async () => {
+                await forwardMessage(forwardMenu.msgId, u._id);
+                setForwardMenu({ isOpen: false, msgId: "" });
+                setForwardSearch("");
+              }}
+              className="flex items-center gap-3 p-3 hover:bg-base-200 rounded-2xl transition-colors text-left"
+            >
+              <img
+                src={u.profilePic || "/avatar.png"}
+                alt={u.fullName}
+                className="size-10 rounded-full object-cover"
+              />
+              <div>
+                <div className="font-semibold text-sm">{u.fullName}</div>
+                <div className="text-xs text-base-content/50">{u.email}</div>
+              </div>
+            </button>
+          ))}
+
+        {users.filter((u: any) =>
+          u.fullName.toLowerCase().includes(forwardSearch.toLowerCase())
+        ).length === 0 && (
+          <div className="text-center text-base-content/40 text-sm py-8">
+            No contacts found
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={() => { setForwardMenu({ isOpen: false, msgId: "" }); setForwardSearch(""); }}
+        className="btn btn-outline mt-4 normal-case"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
+
+
 };
 
 export default ChatContainer;

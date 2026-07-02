@@ -178,6 +178,25 @@ export const useChatStore = create<any>((set, get) => ({
     }
   },
 
+  forwardMessage: async (messageId: string, toUserId: string) => {
+  try {
+    // Pehle message dhundo local state mein
+    const message = get().messages.find((m: any) => m._id === messageId);
+    if (!message) return;
+
+    // Usi content ko naye user ko bhejo
+    await axiosInstance.post(`/messages/send/${toUserId}`, {
+      text: message.text || "",
+      image: message.image || null,
+      audio: message.audio || null,
+    });
+
+    toast.success("Message forwarded!");
+  } catch (error: any) {
+    toast.error("Failed to forward message");
+  }
+},
+
 
   toggleReaction: async (messageId: string, emoji: string) => {
   try {
