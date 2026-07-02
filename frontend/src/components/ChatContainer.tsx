@@ -35,11 +35,15 @@ const useLongPress = (callback: () => void, ms = 600) => {
 const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLongPress: () => void; authUser: any }) => {
   const isMe = message.senderId === authUser._id || message.senderId?._id === authUser._id;
   const longPressEvent = useLongPress(onLongPress);
+  
+  // State for emoji bar toggle (Make sure to define or handle this state if needed)
+  const [showEmojiBar, setShowEmojiBar] = useState(false);
 
   return (
+    // Added "group" class here as requested
     <div 
       {...(!message.isDeleted ? longPressEvent : {})} 
-      className={`chat ${isMe ? "chat-end" : "chat-start"} select-none ${!message.isDeleted ? "cursor-pointer" : "cursor-default"}`}
+      className={`chat ${isMe ? "chat-end" : "chat-start"} select-none group ${!message.isDeleted ? "cursor-pointer" : "cursor-default"}`}
     >
       {/* Chat Bubble Structure */}
       <div 
@@ -83,6 +87,18 @@ const MessageBubble = ({ message, onLongPress, authUser }: { message: any; onLon
           </>
         )}
       </div>
+
+      {/* Emoji reaction trigger (Added right under the message bubble) */}
+      {!message.isDeleted && (
+        <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+          <button
+            onClick={() => setShowEmojiBar((v) => !v)}
+            className="opacity-0 group-hover:opacity-100 text-base-content/40 hover:text-base-content/70 text-xs px-1.5 py-0.5 rounded-full hover:bg-base-200 transition-all duration-150"
+          >
+            😊
+          </button>
+        </div>
+      )}
 
       {/* Blue tick / single tick below sent messages */}
       {isMe && !message.isDeleted && (
@@ -247,15 +263,15 @@ const ChatContainer = () => {
             </button>
           )}
           {/* Clear Chat Button */}
-{selectedUser && (
-  <button
-    onClick={() => setShowClearConfirm(true)}
-    className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150"
-    title="Clear chat"
-  >
-    <Trash2 size={18} />
-  </button>
-)}
+          {selectedUser && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="hover:bg-base-200 p-1.5 rounded-full transition-colors duration-150"
+              title="Clear chat"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
           
 
           {/* Voice Call Button */}
@@ -351,40 +367,40 @@ const ChatContainer = () => {
                 Cancel
               </button>
               {/* Clear Chat Confirmation */}
-{showClearConfirm && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
-    onClick={() => setShowClearConfirm(false)}
-  >
-    <div
-      className="bg-base-100 w-full max-w-md rounded-t-3xl p-6"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
-      <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
-      <p className="text-sm text-base-content/60 text-center mb-6">
-        All messages will be deleted for you only. This cannot be undone.
-      </p>
-      <div className="flex flex-col gap-2">
-        <button
-          onClick={async () => {
-            await clearChat(selectedUser._id);
-            setShowClearConfirm(false);
-          }}
-          className="btn btn-error normal-case"
-        >
-          🗑️ Clear for me
-        </button>
-        <button
-          onClick={() => setShowClearConfirm(false)}
-          className="btn btn-outline mt-2 normal-case"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+              {showClearConfirm && (
+                <div
+                  className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 backdrop-blur-sm"
+                  onClick={() => setShowClearConfirm(false)}
+                >
+                  <div
+                    className="bg-base-100 w-full max-w-md rounded-t-3xl p-6"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-6" />
+                    <h3 className="font-bold text-lg mb-2 text-center">Clear Chat?</h3>
+                    <p className="text-sm text-base-content/60 text-center mb-6">
+                      All messages will be deleted for you only. This cannot be undone.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={async () => {
+                          await clearChat(selectedUser._id);
+                          setShowClearConfirm(false);
+                        }}
+                        className="btn btn-error normal-case"
+                      >
+                        🗑️ Clear for me
+                      </button>
+                      <button
+                        onClick={() => setShowClearConfirm(false)}
+                        className="btn btn-outline mt-2 normal-case"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
