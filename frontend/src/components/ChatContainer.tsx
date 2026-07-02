@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import MessageInput from "./MessageInput";
 import { useThemeStore } from "../store/useThemeStore";
 import { axiosInstance } from "../lib/axios";
+import { formatLastSeen } from "../lib/utils";
 
 import { useCallStore } from "../store/useCallStore";
 
@@ -208,13 +209,13 @@ const ChatContainer = () => {
       forwardMessage, // ← ADD
   users,          // ← ADD
   } = useChatStore();
-
-  const { authUser, socket, toggleBlock } = useAuthStore();
+const { authUser, socket, toggleBlock, onlineUsers } = useAuthStore();
   const [isTyping, setIsTyping] = useState(false);
   const { fontSize, wallpaper } = useThemeStore();
   const scrollRef = useRef<any>(null);
 
   const isBlocked = authUser?.blockedUsers?.includes(selectedUser?._id);
+  const isOnline = onlineUsers.some((id: string) => id?.toString() === selectedUser?._id?.toString());
 
   const [deleteMenu, setDeleteMenu] = useState<{ isOpen: boolean; msgId: string; isSender: boolean }>({
     isOpen: false, msgId: "", isSender: false,
@@ -324,7 +325,11 @@ const [forwardSearch, setForwardSearch] = useState("");
           <span className="size-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
         </span>
       </span>
-    ) : "Online"
+    ) : isOnline ? (
+      <span className="text-emerald-500">Online</span>
+    ) : (
+      formatLastSeen(selectedUser.lastSeen)
+    )
   ) : "Group Chat"}
 </p>
           </div>
